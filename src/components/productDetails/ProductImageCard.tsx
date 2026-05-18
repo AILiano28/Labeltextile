@@ -66,7 +66,7 @@ interface OtherInfoItem {
 // ─── Schema ───────────────────────────────────────────────────────────────────
 const formSchema = z.object({
   fullName: z.string().min(2, "الاسم الكامل مطلوب"),
-  phone: z.string().min(8, "رقم الهاتف مطلوب"), 
+  phone: z.string().min(8, "رقم الهاتف مطلوب"),
   size: z.string().min(1, "المقاس مطلوب"),
   color: z.string().optional(),
   country: z.string().optional(),
@@ -293,7 +293,6 @@ export function ProductImageCard({ product }: { product: Product }) {
   const imageColRef = useRef<HTMLDivElement>(null);
   const sectionRef = useRef<HTMLDivElement>(null);
   const swiperRef = useRef<any>(null);
-
   useEffect(() => {
     setIsRTL(
       document.documentElement.dir === "rtl" ||
@@ -356,7 +355,7 @@ export function ProductImageCard({ product }: { product: Product }) {
     resolver: zodResolver(formSchema),
     defaultValues: {
       fullName: "",
-      phone: "", 
+      phone: "",
       size: "S",
       shippingType: "domicile",
     },
@@ -407,7 +406,7 @@ export function ProductImageCard({ product }: { product: Product }) {
         size: data.size,
         name: firstName,
         surName: lastName,
-        city: data.commune || data.country || "", 
+        city: data.commune || data.country || "",
         contact: data.phone,
         status: "In Process",
         address: "null",
@@ -437,6 +436,33 @@ export function ProductImageCard({ product }: { product: Product }) {
     }
   };
 
+
+  const parsedOtherInfo =
+    typeof otherInfo === "string"
+      ? JSON.parse(otherInfo)
+      : otherInfo || [];
+
+  const dynamicOtherInfoItems =
+    parsedOtherInfo.length > 0
+      ? parsedOtherInfo.map((item: any, idx: number) => ({
+        title: item.question,
+        content: (
+          <p className="text-[15px] leading-[1.8] text-black/60 whitespace-pre-line">
+            {item.answer}
+          </p>
+        ),
+      }))
+      : [
+        {
+          title: "سياسة التوصيل",
+          content: (
+            <p className="text-[16px] leading-[1.8] text-black/60">
+              يتم التوصيل خلال 3-5 أيام عمل إلى جميع الولايات.
+            </p>
+          ),
+        },
+      ];
+
   // ─── Accordion items ──────────────────────────────────────────────────────
   const accordionItems = [
     {
@@ -457,34 +483,10 @@ export function ProductImageCard({ product }: { product: Product }) {
         </p>
       ),
     },
-    {
-      title: "وصف المنتج",
-      content: (
-        <p className="text-[16px] leading-[1.8] text-black/60">
-          {product.description || "هذا المنتج مصنوع من خامات عالية الجودة ومناسب للاستخدام اليومي."}
-        </p>
-      ),
-    },
-    {
-      title: "سياسة التوصيل",
-      content:
-        otherInfo.length > 0 ? (
-          <div className="space-y-4" dir="rtl">
-            {otherInfo.map((item, idx) => (
-              <div key={idx} className="space-y-1">
-                <p className="text-[15px] font-semibold text-black/80">{item.question}</p>
-                <p className="text-[15px] leading-[1.8] text-black/60">{item.answer}</p>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <p className="text-[16px] leading-[1.8] text-black/60">
-            يتم التوصيل خلال 3-5 أيام عمل إلى جميع الولايات.
-          </p>
-        ),
-    },
-  ];
 
+    ...dynamicOtherInfoItems,
+  ];
+  console.log(parsedOtherInfo);
   const scrollToForm = () => {
     document.getElementById("order-form")?.scrollIntoView({ behavior: "smooth" });
   };
@@ -555,19 +557,29 @@ export function ProductImageCard({ product }: { product: Product }) {
 
             {/* ACCORDION DESKTOP */}
             <div className="hidden md:block space-y-2 pb-10">
-              {accordionItems.filter((_, i) => i !== 1).map((item, i) => (
+              {accordionItems.map((item, i) => (
                 <div key={i} className="border-b border-[#E9E9E9]">
                   <button
-                    onClick={() => setOpenAccordionIndex(openAccordionIndex === i ? null : i)}
+                    onClick={() =>
+                      setOpenAccordionIndex(openAccordionIndex === i ? null : i)
+                    }
                     className="flex w-full items-center justify-between py-6 text-right"
                   >
-                    <span className="text-[20px] font-medium text-black">{item.title}</span>
+                    <span className="text-[20px] font-medium text-black">
+                      {item.title}
+                    </span>
+
                     <ChevronDown
-                      className={`h-5 w-5 text-black transition-transform duration-500 ${openAccordionIndex === i ? "rotate-180" : ""}`}
+                      className={`h-5 w-5 text-black transition-transform duration-500 ${openAccordionIndex === i ? "rotate-180" : ""
+                        }`}
                     />
                   </button>
+
                   <div
-                    className={`overflow-hidden transition-all duration-500 ease-in-out ${openAccordionIndex === i ? "max-h-[1000px] opacity-100 pb-8" : "max-h-0 opacity-0"}`}
+                    className={`overflow-hidden transition-all duration-500 ease-in-out ${openAccordionIndex === i
+                      ? "max-h-[1000px] opacity-100 pb-8"
+                      : "max-h-0 opacity-0"
+                      }`}
                   >
                     {item.content}
                   </div>
@@ -819,16 +831,30 @@ export function ProductImageCard({ product }: { product: Product }) {
 
             {/* MOBILE ACCORDION */}
             <div className="block md:hidden space-y-2 py-10">
-              {accordionItems.filter((_, i) => i !== 1).map((item, i) => (
+              {accordionItems.map((item, i) => (
                 <div key={i} className="border-b border-[#E9E9E9]">
                   <button
-                    onClick={() => setOpenAccordionIndex(openAccordionIndex === i ? null : i)}
+                    onClick={() =>
+                      setOpenAccordionIndex(openAccordionIndex === i ? null : i)
+                    }
                     className="flex w-full items-center justify-between py-6 text-right"
                   >
-                    <span className="text-[20px] font-medium text-black">{item.title}</span>
-                    <ChevronDown className={`h-5 w-5 text-black transition-transform duration-500 ${openAccordionIndex === i ? "rotate-180" : ""}`} />
+                    <span className="text-[20px] font-medium text-black">
+                      {item.title}
+                    </span>
+
+                    <ChevronDown
+                      className={`h-5 w-5 text-black transition-transform duration-500 ${openAccordionIndex === i ? "rotate-180" : ""
+                        }`}
+                    />
                   </button>
-                  <div className={`overflow-hidden transition-all duration-500 ease-in-out ${openAccordionIndex === i ? "max-h-[1000px] opacity-100 pb-8" : "max-h-0 opacity-0"}`}>
+
+                  <div
+                    className={`overflow-hidden transition-all duration-500 ease-in-out ${openAccordionIndex === i
+                        ? "max-h-[1000px] opacity-100 pb-8"
+                        : "max-h-0 opacity-0"
+                      }`}
+                  >
                     {item.content}
                   </div>
                 </div>
@@ -846,7 +872,7 @@ export function ProductImageCard({ product }: { product: Product }) {
             اشتري الآن
           </Button>
         </div>
-      </div>
+      </div >
     </>
   );
 }
