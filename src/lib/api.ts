@@ -11,11 +11,13 @@ export interface OrderPayload {
   city: string;
   address: string;
   contact: string;
-  status?: string; 
+  status?: string;
   country?: string;
   countryPrice1?: number | null;
   countryPrice2?: number | null;
   color?: number | null;
+  selectedShippingPrice?: number | null;
+  selectedShippingMethod?: string | null;
 }
 
 export interface Order extends OrderPayload {

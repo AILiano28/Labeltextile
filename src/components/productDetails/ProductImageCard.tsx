@@ -2,18 +2,17 @@
 
 import React, { useState, useMemo, useRef, useEffect } from "react";
 import {
-  ChevronLeft,
-  ChevronRight,
   Minus,
   Plus,
   ShieldCheck,
   HandHeart,
   Star,
   ChevronDown,
-  Package,
   Truck,
   RotateCcw,
   BadgeCheck,
+  X,
+  CheckCircle2,
 } from "lucide-react";
 
 import { useForm } from "react-hook-form";
@@ -23,13 +22,18 @@ import * as z from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { api, getImageUrl } from "@/lib/api";
-import { toast } from "react-toastify";
 import { Product } from "@/types/api";
 
 import placeholderImage from "../../../public/assets/placeholder-image.svg";
 import Image from "next/image";
 
 import dynamic from "next/dynamic";
+import { Montserrat } from "next/font/google";
+
+const montserrat = Montserrat({
+  subsets: ["latin"],
+  weight: ["200", "300"],
+});
 
 const ProductGallery = dynamic(() => import("./ProductGallery"), {
   ssr: false,
@@ -54,11 +58,15 @@ interface Country {
   communes: string | Commune[];
 }
 
+interface OtherInfoItem {
+  question: string;
+  answer: string;
+}
+
 // ─── Schema ───────────────────────────────────────────────────────────────────
 const formSchema = z.object({
   fullName: z.string().min(2, "الاسم الكامل مطلوب"),
-  phone: z.string().min(8, "رقم الهاتف مطلوب"),
-  address: z.string().min(5, "العنوان مطلوب"),
+  phone: z.string().min(8, "رقم الهاتف مطلوب"), 
   size: z.string().min(1, "المقاس مطلوب"),
   color: z.string().optional(),
   country: z.string().optional(),
@@ -68,49 +76,101 @@ const formSchema = z.object({
 
 type FormValues = z.infer<typeof formSchema>;
 
-// ─── Size Table ───────────────────────────────────────────────────────────────
-const SizeTable = () => {
-  const sizes = ["XS", "S", "M", "L", "XL", "XXL", "SL"];
+// ─── Luxury Logo ──────────────────────────────────────────────────────────────
+function LuxuryLogo() {
   return (
-    <div className="overflow-x-auto w-full mb-4 scrollbar-hide">
-      <table className="w-full min-w-[100%] md:min-w-[650px] border-collapse border border-[#D1C6B9]">
-        <thead>
-          <tr className="bg-[#E9E1D8]">
-            {Array(5)
-              .fill(0)
-              .map((_, i) => (
-                <th
-                  key={i}
-                  className="border border-[#D1C6B9] py-5 px-4 text-center text-[18px] font-medium text-black"
-                >
-                  حيث تلتقي
-                </th>
-              ))}
-          </tr>
-        </thead>
-        <tbody>
-          {sizes.map((size, idx) => (
-            <tr key={idx}>
-              {Array(4)
-                .fill(0)
-                .map((_, i) => (
-                  <td
-                    key={i}
-                    className="border border-[#D1C6B9] py-4 px-4 bg-[#F9F7F5] text-center text-[18px] text-black/70 font-medium"
-                  >
-                    78 - 90
-                  </td>
-                ))}
-              <td className="border border-[#D1C6B9] py-4 px-4 bg-[#E9E1D8] text-center text-[18px] font-medium text-black">
-                {size}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+    <div
+      className={`${montserrat.className} flex flex-col items-center justify-center select-none leading-none`}
+    >
+      <h1 className="uppercase font-extralight text-black whitespace-nowrap text-[22px] tracking-[10px]">
+        LABELTEXTILE
+      </h1>
+      <div className="flex items-center justify-center gap-4 mt-3">
+        <div className="h-[1px] bg-black/40 w-10" />
+        <span className="uppercase text-black/70 font-light text-[10px] tracking-[6px]">
+          ALGERIE
+        </span>
+        <div className="h-[1px] bg-black/40 w-10" />
+      </div>
     </div>
   );
-};
+}
+
+// ─── Thank You Modal ──────────────────────────────────────────────────────────
+function ThankYouModal({ onClose }: { onClose: () => void }) {
+  useEffect(() => {
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, []);
+
+  return (
+    <div
+      className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-300"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div className="relative bg-white w-full max-w-md rounded-[4px] shadow-2xl animate-in zoom-in-95 duration-300 overflow-hidden">
+        {/* Close */}
+        <button
+          onClick={onClose}
+          className="absolute top-4 left-4 text-black/30 hover:text-black/60 transition-colors"
+          aria-label="إغلاق"
+        >
+          <X size={20} />
+        </button>
+
+        {/* Top accent bar */}
+        <div className="h-1 w-full bg-[#B3A495]" />
+
+        <div className="flex flex-col items-center px-8 py-10 text-center" dir="rtl">
+          {/* Logo */}
+          <div className="mb-8">
+            <LuxuryLogo />
+          </div>
+
+          {/* Check icon */}
+          <div className="w-16 h-16 rounded-full bg-[#F5F0EB] flex items-center justify-center mb-6">
+            <CheckCircle2 size={32} className="text-[#B3A495]" />
+          </div>
+
+          <h2 className="text-[22px] font-bold text-black mb-3">شكراً لطلبك!</h2>
+
+          <p className="text-[15px] leading-[1.8] text-black/55 mb-2">
+            تم استلام طلبك بنجاح وسيتم التواصل معك في أقرب وقت ممكن.
+          </p>
+          <p className="text-[13px] text-black/35 mb-8">نشكرك على ثقتك بـ LABELTEXTILE</p>
+
+          {/* Trust badges */}
+          <div className="w-full grid grid-cols-3 gap-0 border border-[#E9E1D8] rounded-[4px] overflow-hidden mb-8">
+            {[
+              { icon: <BadgeCheck size={15} className="text-[#B3A495]" />, label: "الدفع عند الاستلام" },
+              { icon: <RotateCcw size={15} className="text-[#B3A495]" />, label: "إرجاع خلال 7 أيام" },
+              { icon: <Truck size={15} className="text-[#B3A495]" />, label: "توصيل 1-3 أيام" },
+            ].map((b, i) => (
+              <div
+                key={i}
+                className={`flex flex-col items-center gap-1.5 py-3 px-2 bg-[#FDFAF7] ${i < 2 ? "border-l border-[#E9E1D8]" : ""}`}
+              >
+                {b.icon}
+                <span className="text-[10px] text-black/45 text-center leading-tight">{b.label}</span>
+              </div>
+            ))}
+          </div>
+
+          <Button
+            onClick={onClose}
+            className="w-full h-12 bg-[#B3A495] hover:bg-[#a39485] text-[16px] font-medium rounded-[2px]"
+          >
+            متابعة التسوق
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 // ─── Order Recap ──────────────────────────────────────────────────────────────
 interface OrderRecapProps {
@@ -145,31 +205,16 @@ const OrderRecap = ({
 
   return (
     <div className="mt-6 rounded-[4px] border border-[#E9E1D8] overflow-hidden bg-[#FDFAF7]">
-      {/* Header */}
       <div className="bg-[#E9E1D8] px-5 py-3 text-right">
-        <span className="text-[15px] font-semibold text-black/80 tracking-wide">
-          ملخص الطلب
-        </span>
+        <span className="text-[15px] font-semibold text-black/80 tracking-wide">ملخص الطلب</span>
       </div>
 
-      {/* Product row */}
       <div className="flex items-center gap-4 px-5 py-4 border-b border-[#E9E1D8]" dir="rtl">
-        {/* Thumbnail */}
         <div className="relative w-16 h-20 flex-shrink-0 rounded-[3px] overflow-hidden bg-[#F0EBE5]">
-          <Image
-            src={imageUrl(images[0])}
-            alt={product.title}
-            fill
-            sizes="64px"
-            className="object-cover"
-          />
+          <Image src={imageUrl(images[0])} alt={product.title} fill sizes="64px" className="object-cover" />
         </div>
-
-        {/* Details */}
         <div className="flex-1 min-w-0">
-          <p className="text-[15px] font-semibold text-black truncate">
-            {product.title}
-          </p>
+          <p className="text-[15px] font-semibold text-black truncate">{product.title}</p>
           <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1.5">
             <span className="text-[13px] text-black/50">
               المقاس: <span className="text-black/70 font-medium">{selectedSize}</span>
@@ -177,76 +222,49 @@ const OrderRecap = ({
             {selectedColor && (
               <span className="flex items-center gap-1.5 text-[13px] text-black/50">
                 اللون:
-                <span
-                  className="inline-block w-3.5 h-3.5 rounded-full border border-black/10"
-                  style={{ backgroundColor: selectedColor }}
-                />
+                <span className="inline-block w-3.5 h-3.5 rounded-full border border-black/10" style={{ backgroundColor: selectedColor }} />
               </span>
             )}
           </div>
-
-          {/* Quantity control inline */}
           <div className="flex items-center gap-2 mt-2" dir="ltr">
-            <button
-              type="button"
-              onClick={() => onQuantityChange(Math.max(1, quantity - 1))}
-              className="w-7 h-7 flex items-center justify-center rounded-full border border-black/15 hover:bg-[#E9E1D8] transition-colors"
-            >
+            <button type="button" onClick={() => onQuantityChange(Math.max(1, quantity - 1))} className="w-7 h-7 flex items-center justify-center rounded-full border border-black/15 hover:bg-[#E9E1D8] transition-colors">
               <Minus size={11} />
             </button>
             <span className="w-6 text-center text-[14px] font-semibold">{quantity}</span>
-            <button
-              type="button"
-              onClick={() => onQuantityChange(quantity + 1)}
-              className="w-7 h-7 flex items-center justify-center rounded-full border border-black/15 hover:bg-[#E9E1D8] transition-colors"
-            >
+            <button type="button" onClick={() => onQuantityChange(quantity + 1)} className="w-7 h-7 flex items-center justify-center rounded-full border border-black/15 hover:bg-[#E9E1D8] transition-colors">
               <Plus size={11} />
             </button>
           </div>
         </div>
-
-        {/* Price */}
-        <div className="text-[16px] font-bold text-black flex-shrink-0">
-          {productPrice.toLocaleString()} د.ج
-        </div>
+        <div className="text-[16px] font-bold text-black flex-shrink-0">{productPrice.toLocaleString()} د.ج</div>
       </div>
 
-      {/* Cost breakdown */}
       <div className="px-5 py-4 space-y-2.5 border-b border-[#E9E1D8]" dir="rtl">
-        <div className="flex justify-between text-[14px] text-black/60">
+        <div className="flex justify-between flex-row-reverse text-[14px] text-black/60">
           <span>{productPrice.toLocaleString()} د.ج</span>
           <span>المجموع الفرعي</span>
         </div>
-        <div className="flex justify-between text-[14px] text-black/60">
+        <div className="flex justify-between  flex-row-reverse text-[14px] text-black/60">
           <span className="text-[#B3A495] font-medium">{shippingPrice.toLocaleString()} د.ج</span>
           <span>
             التوصيل —{" "}
-            <span className="text-black/40 text-[12px]">
-              {shippingType === "domicile" ? "إلى المنزل" : "مكتب DHD"}
-            </span>
+            <span className="text-black/40 text-[12px]">{shippingType === "domicile" ? "إلى المنزل" : "مكتب DHD"}</span>
           </span>
         </div>
       </div>
 
-      {/* Total */}
-      <div className="flex justify-between items-center px-5 py-4" dir="rtl">
-        <span className="text-[20px] font-bold text-black">
-          {total.toLocaleString()} د.ج
-        </span>
+      <div className="flex justify-between  flex-row-reverse items-center px-5 py-4" dir="rtl">
+        <span className="text-[20px] font-bold text-black">{total.toLocaleString()} د.ج</span>
         <span className="text-[15px] font-semibold text-black/70">المجموع الكلي</span>
       </div>
 
-      {/* Trust badges */}
       <div className="grid grid-cols-3 gap-0 border-t border-[#E9E1D8]">
         {[
           { icon: <BadgeCheck size={16} className="text-[#B3A495]" />, label: "الدفع عند الاستلام" },
           { icon: <RotateCcw size={16} className="text-[#B3A495]" />, label: "إرجاع خلال 7 أيام" },
           { icon: <Truck size={16} className="text-[#B3A495]" />, label: "توصيل 1-3 أيام" },
         ].map((badge, i) => (
-          <div
-            key={i}
-            className={`flex flex-col items-center gap-1.5 py-3 px-2 ${i < 2 ? "border-l border-[#E9E1D8]" : ""}`}
-          >
+          <div key={i} className={`flex flex-col items-center gap-1.5 py-3 px-2 ${i < 2 ? "border-l border-[#E9E1D8]" : ""}`}>
             {badge.icon}
             <span className="text-[11px] text-black/50 text-center leading-tight">{badge.label}</span>
           </div>
@@ -261,6 +279,7 @@ export function ProductImageCard({ product }: { product: Product }) {
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showThankYou, setShowThankYou] = useState(false);
   const [openAccordionIndex, setOpenAccordionIndex] = useState<number | null>(null);
   const [showStickyButton, setShowStickyButton] = useState(false);
   const [isRTL, setIsRTL] = useState(false);
@@ -269,6 +288,7 @@ export function ProductImageCard({ product }: { product: Product }) {
   const [selectedCountry, setSelectedCountry] = useState<Country | null>(null);
   const [communes, setCommunes] = useState<Commune[]>([]);
   const [shippingType, setShippingType] = useState<"domicile" | "bureau">("domicile");
+  const [selectedColor, setSelectedColor] = useState("");
 
   const imageColRef = useRef<HTMLDivElement>(null);
   const sectionRef = useRef<HTMLDivElement>(null);
@@ -277,7 +297,7 @@ export function ProductImageCard({ product }: { product: Product }) {
   useEffect(() => {
     setIsRTL(
       document.documentElement.dir === "rtl" ||
-        document.documentElement.lang?.startsWith("ar"),
+      document.documentElement.lang?.startsWith("ar"),
     );
   }, []);
 
@@ -302,6 +322,19 @@ export function ProductImageCard({ product }: { product: Product }) {
     }
   }, [product.images]);
 
+  const otherInfo: OtherInfoItem[] = useMemo(() => {
+    try {
+      if (!product.otherInfo) return [];
+      const parsed =
+        typeof product.otherInfo === "string"
+          ? JSON.parse(product.otherInfo)
+          : product.otherInfo;
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }, [product.otherInfo]);
+
   useEffect(() => {
     if (swiperRef.current) swiperRef.current.slideTo(selectedImageIndex);
   }, [selectedImageIndex]);
@@ -323,18 +356,15 @@ export function ProductImageCard({ product }: { product: Product }) {
     resolver: zodResolver(formSchema),
     defaultValues: {
       fullName: "",
-      phone: "",
-      address: "",
+      phone: "", 
       size: "S",
       shippingType: "domicile",
     },
   });
 
   const selectedSize = watch("size");
-  const [selectedColor, setSelectedColor] = useState("");
 
   const imageUrl = (src: string) => (src.startsWith("/") ? src : getImageUrl(src));
-
   const nextImage = () => setSelectedImageIndex((p) => (p + 1) % images.length);
   const prevImage = () => setSelectedImageIndex((p) => (p - 1 + images.length) % images.length);
 
@@ -343,7 +373,6 @@ export function ProductImageCard({ product }: { product: Product }) {
     setSelectedCountry(found);
     setValue("country", found ? String(found.id) : "");
     setValue("commune", "");
-
     if (found) {
       const parsed: Commune[] =
         typeof found.communes === "string" ? JSON.parse(found.communes) : found.communes;
@@ -353,12 +382,21 @@ export function ProductImageCard({ product }: { product: Product }) {
     }
   };
 
+  // ─── Derived shipping values ──────────────────────────────────────────────
+  const selectedShippingPrice: number = selectedCountry
+    ? shippingType === "domicile"
+      ? selectedCountry.price1 ?? 0
+      : selectedCountry.price2 ?? 0
+    : 0;
+
+  const selectedShippingMethod: string =
+    shippingType === "domicile" ? "A domicile" : "Bureau DHD";
+
   const onSubmit = async (data: FormValues) => {
     setIsSubmitting(true);
     const names = data.fullName.trim().split(/\s+/);
     const firstName = names[0];
     const lastName = names.slice(1).join(" ") || " ";
-
     const colorInt = selectedColor ? parseInt(selectedColor.replace("#", ""), 16) : null;
 
     try {
@@ -369,17 +407,21 @@ export function ProductImageCard({ product }: { product: Product }) {
         size: data.size,
         name: firstName,
         surName: lastName,
-        city: data.commune || data.country || "",
-        address: data.address,
+        city: data.commune || data.country || "", 
         contact: data.phone,
-        status: "confirm",
+        status: "In Process",
+        address: "null",
         country: selectedCountry ? selectedCountry.nameAr : undefined,
         countryPrice1: selectedCountry?.price1 ?? null,
         countryPrice2: selectedCountry?.price2 ?? null,
         color: colorInt,
+        selectedShippingPrice,
+        selectedShippingMethod,
       });
 
-      toast.success("تم تقديم طلبك بنجاح! سنتصل بك قريباً.");
+      // Show thank-you modal on success
+      setShowThankYou(true);
+
       reset();
       setQuantity(1);
       setSelectedCountry(null);
@@ -388,14 +430,33 @@ export function ProductImageCard({ product }: { product: Product }) {
       setShippingType("domicile");
     } catch (error) {
       console.error(error);
+      const { toast } = await import("react-toastify");
       toast.error("حدث خطأ أثناء تقديم الطلب. يرجى المحاولة مرة أخرى.");
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  // ─── Accordion items ──────────────────────────────────────────────────────
   const accordionItems = [
-    { title: "دليل المقاسات", content: <SizeTable /> },
+    {
+      title: "دليل المقاسات",
+      content: product.tableImage ? (
+        <div className="w-full overflow-x-auto">
+          <Image
+            src={imageUrl(product.tableImage)}
+            alt="دليل المقاسات"
+            width={800}
+            height={600}
+            className="w-full h-auto rounded-[4px] object-contain"
+          />
+        </div>
+      ) : (
+        <p className="text-[16px] leading-[1.8] text-black/60">
+          لا يوجد دليل مقاسات متاح لهذا المنتج.
+        </p>
+      ),
+    },
     {
       title: "وصف المنتج",
       content: (
@@ -406,11 +467,21 @@ export function ProductImageCard({ product }: { product: Product }) {
     },
     {
       title: "سياسة التوصيل",
-      content: (
-        <p className="text-[16px] leading-[1.8] text-black/60">
-          يتم التوصيل خلال 3-5 أيام عمل إلى جميع الولايات.
-        </p>
-      ),
+      content:
+        otherInfo.length > 0 ? (
+          <div className="space-y-4" dir="rtl">
+            {otherInfo.map((item, idx) => (
+              <div key={idx} className="space-y-1">
+                <p className="text-[15px] font-semibold text-black/80">{item.question}</p>
+                <p className="text-[15px] leading-[1.8] text-black/60">{item.answer}</p>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-[16px] leading-[1.8] text-black/60">
+            يتم التوصيل خلال 3-5 أيام عمل إلى جميع الولايات.
+          </p>
+        ),
     },
   ];
 
@@ -432,397 +503,62 @@ export function ProductImageCard({ product }: { product: Product }) {
   const selectCls =
     "w-full h-14 bg-[#F9F9F9] border border-black/10 rounded-[2px] text-right px-4 appearance-none outline-none focus:ring-1 focus:ring-[#B3A495] pr-4 pl-10";
 
-  // Determine if recap should be shown: country selected + size selected
   const showRecap = !!selectedCountry && !!selectedSize;
 
   return (
-    <div className="w-full overflow-hidden">
-      <div
-        ref={sectionRef}
-        className="flex flex-col md:flex-row gap-0 sm:gap-5 lg:gap-10 h-auto md:h-[900px] w-full min-w-0"
-      >
-        {/* ── IMAGE GALLERY ──────────────────────────────────────────────── */}
+    <>
+      {showThankYou && <ThankYouModal onClose={() => setShowThankYou(false)} />}
+
+      <div className="w-full overflow-hidden">
         <div
-          ref={imageColRef}
-          className="flex-1 flex flex-col md:overflow-y-auto no-scrollbar order-1 md:order-2 h-full w-full min-w-0"
+          ref={sectionRef}
+          className="flex flex-col md:flex-row gap-0 sm:gap-5 lg:gap-10 h-auto md:h-[1000px] w-full min-w-0"
         >
-          <div className="flex flex-col md:flex-row gap-4 mb-10 h-auto md:h-[750px] flex-shrink-0 w-full">
-            <ProductGallery
-              images={images}
-              imageUrl={imageUrl}
-              selectedImageIndex={selectedImageIndex}
-              setSelectedImageIndex={setSelectedImageIndex}
-              isRTL={isRTL}
-              swiperRef={swiperRef}
-              prevImage={prevImage}
-              nextImage={nextImage}
-            />
+          {/* ── IMAGE GALLERY ────────────────────────────────────────────── */}
+          <div
+            ref={imageColRef}
+            className="flex-1 flex flex-col md:overflow-y-auto no-scrollbar order-1 md:order-2 h-full w-full min-w-0"
+          >
+            <div className="flex flex-col md:flex-row gap-4 mb-10 h-auto md:h-[750px] flex-shrink-0 w-full">
+              <ProductGallery
+                images={images}
+                imageUrl={imageUrl}
+                selectedImageIndex={selectedImageIndex}
+                setSelectedImageIndex={setSelectedImageIndex}
+                isRTL={isRTL}
+                swiperRef={swiperRef}
+                prevImage={prevImage}
+                nextImage={nextImage}
+              />
 
-            <div className="hidden md:flex flex-col gap-3 w-[100px] p-2">
-              {images.map((img, index) => (
-                <button
-                  key={index}
-                  type="button"
-                  onClick={() => setSelectedImageIndex(index)}
-                  className={`relative aspect-[3/4] w-full overflow-hidden rounded-[4px] transition-all ${selectedImageIndex === index ? "ring-2 ring-[#B3A495]" : "opacity-60 hover:opacity-100"}`}
-                >
-                  <Image
-                    src={imageUrl(img)}
-                    alt={`Thumbnail ${index + 1}`}
-                    quality={75}
-                    loading="lazy"
-                    fill
-                    sizes="100px"
-                    className="object-cover"
-                  />
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* ACCORDION DESKTOP */}
-          <div className="hidden md:block space-y-2 pb-10">
-            {accordionItems.filter((_, i) => i !== 1).map((item, i) => (
-              <div key={i} className="border-b border-[#E9E9E9]">
-                <button
-                  onClick={() =>
-                    setOpenAccordionIndex(openAccordionIndex === i ? null : i)
-                  }
-                  className="flex w-full items-center justify-between py-6 text-right"
-                >
-                  <span className="text-[20px] font-medium text-black">{item.title}</span>
-                  <ChevronDown
-                    className={`h-5 w-5 text-black transition-transform duration-500 ${openAccordionIndex === i ? "rotate-180" : ""}`}
-                  />
-                </button>
-                <div
-                  className={`overflow-hidden transition-all duration-500 ease-in-out ${openAccordionIndex === i ? "max-h-[1000px] opacity-100 pb-8" : "max-h-0 opacity-0"}`}
-                >
-                  {item.content}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* ── PRODUCT DETAILS / FORM ─────────────────────────────────────── */}
-        <div
-          id="order-form"
-          className="flex-1 flex flex-col items-start w-full text-right order-2 md:order-1 h-full md:overflow-y-auto no-scrollbar px-0 min-w-0"
-        >
-          <h1 className="text-[32px] md:text-[42px] font-bold leading-tight text-black mb-4">
-            {product.title}
-          </h1>
-
-          <div className="flex items-start flex-col justify-start gap-8 mb-8">
-            <div className="text-[28px] font-bold text-black">
-              {product.discountPrice || product.price} د.ج
-              {product.discountPrice && (
-                <span className="text-[16px] line-through text-black/40 mr-3">
-                  {product.price} د.ج
-                </span>
-              )}
-            </div>
-            {product.description && (
-              <p className="block text-[15px] leading-[1.8] text-black/60 mb-6 text-right">
-                {product.description}
-              </p>
-            )}
-            <div className="flex items-center gap-2">
-              <span className="text-[14px] text-black/40">
-                ({product.reviewsCount || 0} مراجعة)
-              </span>
-              <span className="text-[16px] font-medium text-black">{product.rating || 5.0}</span>
-              <Star size={18} fill="#FFD700" className="text-[#FFD700]" />
-            </div>
-          </div>
-
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 w-full">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Full Name */}
-              <div className="space-y-1 col-span-2">
-                <Input
-                  placeholder="الاسم الكامل"
-                  {...register("fullName")}
-                  className="h-14 bg-[#F9F9F9] border border-black/10 rounded-[2px] text-right"
-                />
-                {errors.fullName && (
-                  <p className="text-red-500 text-xs">{errors.fullName.message}</p>
-                )}
-              </div>
-
-              {/* Phone */}
-              <div className="space-y-1 col-span-2">
-                <Input
-                  placeholder="رقم الهاتف"
-                  {...register("phone")}
-                  className="h-14 bg-[#F9F9F9] border border-black/10 rounded-[2px] text-right"
-                />
-                {errors.phone && (
-                  <p className="text-red-500 text-xs">{errors.phone.message}</p>
-                )}
-              </div>
-
-              {/* Wilaya */}
-              <div className="col-span-2 space-y-1">
-                <div className="relative">
-                  <select
-                    onChange={handleCountryChange}
-                    defaultValue=""
-                    className={selectCls}
-                    dir="rtl"
-                  >
-                    <option value="" disabled>
-                      اختر الولاية
-                    </option>
-                    {countries.map((c) => (
-                      <option key={c.id} value={String(c.id)}>
-                        {c.nameAr}
-                      </option>
-                    ))}
-                  </select>
-                  <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none">
-                    <ChevronDown size={20} className="text-black/40" />
-                  </div>
-                </div>
-              </div>
-
-              {/* Commune */}
-              {communes.length > 0 && (
-                <div className="col-span-2 space-y-1">
-                  <div className="relative">
-                    <select
-                      {...register("commune")}
-                      defaultValue=""
-                      className={selectCls}
-                      dir="rtl"
-                    >
-                      <option value="" disabled>
-                        اختر البلدية
-                      </option>
-                      {communes.map((cm) => (
-                        <option key={cm.id} value={String(cm.id)}>
-                          {cm.nameAr}
-                        </option>
-                      ))}
-                    </select>
-                    <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none">
-                      <ChevronDown size={20} className="text-black/40" />
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Address */}
-              <div className="col-span-2 space-y-1">
-                <Input
-                  placeholder="العنوان"
-                  {...register("address")}
-                  className="h-14 bg-[#F9F9F9] border border-black/10 rounded-[2px] text-right"
-                />
-                {errors.address && (
-                  <p className="text-red-500 text-xs">{errors.address.message}</p>
-                )}
-              </div>
-            </div>
-
-            {/* ── SIZE ─────────────────────────────────────────────────────── */}
-            <div className="space-y-3">
-              <p className="text-[14px] text-black/40">اختر المقاس</p>
-              <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2">
-                {(typeof product.sizeInfo === "string"
-                  ? JSON.parse(product.sizeInfo || "[]")
-                  : product.sizeInfo || ["XS", "S", "M", "L"]
-                ).map((size: string) => (
+              <div className="hidden md:flex flex-col gap-3 w-[100px] p-2">
+                {images.map((img, index) => (
                   <button
-                    key={size}
+                    key={index}
                     type="button"
-                    onClick={() => setValue("size", size)}
-                    className={`h-11 w-20 flex-shrink-0 flex items-center justify-center text-[14px] rounded-[2px] transition-all ${selectedSize === size ? "bg-[#B3A495] text-white" : "bg-[#E9E1D8] text-black/60"}`}
+                    onClick={() => setSelectedImageIndex(index)}
+                    className={`relative aspect-[3/4] w-full overflow-hidden rounded-[4px] transition-all ${selectedImageIndex === index ? "ring-2 ring-[#B3A495]" : "opacity-60 hover:opacity-100"}`}
                   >
-                    {size}
+                    <Image
+                      src={imageUrl(img)}
+                      alt={`Thumbnail ${index + 1}`}
+                      quality={75}
+                      loading="lazy"
+                      fill
+                      sizes="100px"
+                      className="object-cover"
+                    />
                   </button>
                 ))}
               </div>
             </div>
 
-            {/* ── COLORS ───────────────────────────────────────────────────── */}
-            {colors.length > 0 && (
-              <div className="space-y-3">
-                <p className="text-[14px] text-black/40">اختر اللون</p>
-                <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2">
-                  {colors.map((color) => (
-                    <button
-                      key={color}
-                      type="button"
-                      onClick={() => {
-                        setSelectedColor(color);
-                        setValue("color", color);
-                      }}
-                      className={`relative h-11 w-11 rounded-1 border-2 transition-all flex-shrink-0 ${selectedColor === color ? "border-black scale-90" : "border-black/10"}`}
-                      style={{ backgroundColor: color }}
-                    >
-                      {selectedColor === color && (
-                        <div className="absolute inset-0 flex items-center justify-center">
-                          <div className="w-2 h-2 rounded-full bg-white" />
-                        </div>
-                      )}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* ── SHIPPING METHOD ───────────────────────────────────────────── */}
-            {selectedCountry && (
-              <div className="space-y-3">
-                <p className="text-[14px] text-black/40 text-right">اختر طريقة الشحن</p>
-                <div className="space-y-2">
-                  {/* A domicile */}
-                  <label
-                    className={`flex items-center justify-between gap-3 px-4 h-14 border rounded-[2px] cursor-pointer transition-all ${shippingType === "domicile" ? "border-[#B3A495] bg-[#F9F7F5]" : "border-black/10 bg-[#F9F9F9]"}`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div
-                        className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${shippingType === "domicile" ? "border-[#B3A495]" : "border-black/30"}`}
-                      >
-                        {shippingType === "domicile" && (
-                          <div className="w-2.5 h-2.5 rounded-full bg-[#B3A495]" />
-                        )}
-                      </div>
-                      <span className="text-[15px] font-medium text-black">A domicile</span>
-                    </div>
-                    {selectedCountry.price1 !== null ? (
-                      <span className="text-[15px] font-bold text-[#B3A495]">
-                        {selectedCountry.price1} د.ج
-                      </span>
-                    ) : (
-                      <span className="text-[13px] text-black/40">99.99 د.ج</span>
-                    )}
-                    <input
-                      type="radio"
-                      className="hidden"
-                      checked={shippingType === "domicile"}
-                      onChange={() => {
-                        setShippingType("domicile");
-                        setValue("shippingType", "domicile");
-                      }}
-                    />
-                  </label>
-
-                  {/* Bureau DHD */}
-                  <label
-                    className={`flex items-center justify-between gap-3 px-4 h-14 border rounded-[2px] cursor-pointer transition-all ${shippingType === "bureau" ? "border-[#B3A495] bg-[#F9F7F5]" : "border-black/10 bg-[#F9F9F9]"}`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div
-                        className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${shippingType === "bureau" ? "border-[#B3A495]" : "border-black/30"}`}
-                      >
-                        {shippingType === "bureau" && (
-                          <div className="w-2.5 h-2.5 rounded-full bg-[#B3A495]" />
-                        )}
-                      </div>
-                      <span className="text-[15px] font-medium text-black">Bureau DHD</span>
-                    </div>
-                    {selectedCountry.price2 !== null ? (
-                      <span className="text-[15px] font-bold text-[#B3A495]">
-                        {selectedCountry.price2} د.ج
-                      </span>
-                    ) : (
-                      <span className="text-[13px] text-black/40">99.99 د.ج</span>
-                    )}
-                    <input
-                      type="radio"
-                      className="hidden"
-                      checked={shippingType === "bureau"}
-                      onChange={() => {
-                        setShippingType("bureau");
-                        setValue("shippingType", "bureau");
-                      }}
-                    />
-                  </label>
-                </div>
-              </div>
-            )}
-
-            {/* ── ORDER RECAP ───────────────────────────────────────────────── */}
-            {showRecap && (
-              <div
-                className="transition-all duration-500 ease-in-out animate-in fade-in slide-in-from-top-2"
-                style={{ animationDuration: "400ms" }}
-              >
-                <OrderRecap
-                  product={product}
-                  quantity={quantity}
-                  selectedSize={selectedSize}
-                  selectedColor={selectedColor}
-                  shippingType={shippingType}
-                  selectedCountry={selectedCountry!}
-                  images={images}
-                  imageUrl={imageUrl}
-                  onQuantityChange={setQuantity}
-                />
-              </div>
-            )}
-
-            {/* ── BUY BUTTON ───────────────────────────────────────────────── */}
-            <div className="flex gap-4 items-center">
-              <Button
-                type="submit"
-                disabled={isSubmitting}
-                className="flex-1 h-14 bg-[#B3A495] hover:bg-[#a39485] text-[20px] font-medium rounded-[2px]"
-              >
-                {isSubmitting ? "جاري المعالجة..." : "اشتري الآن"}
-              </Button>
-              {/* Quantity — hidden when recap is shown (recap has its own qty control) */}
-              {!showRecap && (
-                <div className="flex items-center border border-black/10 h-14">
-                  <button
-                    type="button"
-                    onClick={() => setQuantity((q) => (q > 1 ? q - 1 : 1))}
-                    className="w-12 h-full flex items-center justify-center hover:bg-black/5"
-                  >
-                    <Minus size={16} />
-                  </button>
-                  <div className="w-12 h-full flex items-center justify-center text-[18px]">
-                    {quantity}
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setQuantity((q) => q + 1)}
-                    className="w-12 h-full flex items-center justify-center hover:bg-black/5"
-                  >
-                    <Plus size={16} />
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {/* ── FEATURES (only when no recap, avoid duplication) ─────────── */}
-            {!showRecap && (
-              <div className="grid grid-cols-2 gap-4 pt-4">
-                <div className="flex items-center justify-center gap-4 bg-black/5 py-5 rounded-[2px]">
-                  <HandHeart size={22} className="text-[#B3A495]" />
-                  <span className="text-[16px] font-medium">جودة عالية</span>
-                </div>
-                <div className="flex items-center justify-center gap-4 bg-black/5 py-5 rounded-[2px]">
-                  <ShieldCheck size={22} className="text-[#B3A495]" />
-                  <span className="text-[16px] font-medium">توصيل سريع</span>
-                </div>
-              </div>
-            )}
-          </form>
-
-          {/* MOBILE ACCORDION */}
-          <div className="block md:hidden space-y-2 py-10">
-            {accordionItems
-              .filter((_, i) => i !== 1)
-              .map((item, i) => (
+            {/* ACCORDION DESKTOP */}
+            <div className="hidden md:block space-y-2 pb-10">
+              {accordionItems.filter((_, i) => i !== 1).map((item, i) => (
                 <div key={i} className="border-b border-[#E9E9E9]">
                   <button
-                    onClick={() =>
-                      setOpenAccordionIndex(openAccordionIndex === i ? null : i)
-                    }
+                    onClick={() => setOpenAccordionIndex(openAccordionIndex === i ? null : i)}
                     className="flex w-full items-center justify-between py-6 text-right"
                   >
                     <span className="text-[20px] font-medium text-black">{item.title}</span>
@@ -837,21 +573,280 @@ export function ProductImageCard({ product }: { product: Product }) {
                   </div>
                 </div>
               ))}
+            </div>
+          </div>
+
+          {/* ── PRODUCT DETAILS / FORM ───────────────────────────────────── */}
+          <div
+            id="order-form"
+            className="flex-1 flex flex-col items-start w-full text-right order-2 md:order-1 h-full md:overflow-y-auto no-scrollbar px-0 min-w-0"
+          >
+            <h1 className="text-[32px] md:text-[42px] font-bold leading-tight text-black mb-4">
+              {product.title}
+            </h1>
+
+            <div className="flex items-start flex-col justify-start gap-8 mb-8">
+              <div className="text-[28px] font-bold text-black">
+                {product.discountPrice || product.price} د.ج
+                {product.discountPrice && (
+                  <span className="text-[16px] line-through text-black/40 mr-3">
+                    {product.price} د.ج
+                  </span>
+                )}
+              </div>
+              {product.description && (
+                <p className="block text-[15px] leading-[1.8] text-black/60 mb-6 text-right">
+                  {product.description}
+                </p>
+              )}
+              <div className="flex items-center gap-2">
+                <span className="text-[14px] text-black/40">
+                  ({product.reviewsCount || 0} مراجعة)
+                </span>
+                <span className="text-[16px] font-medium text-black">{product.rating || 5.0}</span>
+                <Star size={18} fill="#FFD700" className="text-[#FFD700]" />
+              </div>
+            </div>
+
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 w-full">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Full Name */}
+                <div className="space-y-1 col-span-2">
+                  <Input
+                    placeholder="الاسم الكامل"
+                    {...register("fullName")}
+                    className="h-14 bg-[#F9F9F9] border border-black/10 rounded-[2px] text-right"
+                  />
+                  {errors.fullName && <p className="text-red-500 text-xs">{errors.fullName.message}</p>}
+                </div>
+
+                {/* Phone */}
+                <div className="space-y-1 col-span-2">
+                  <Input
+                    placeholder="رقم الهاتف"
+                    {...register("phone")}
+                    className="h-14 bg-[#F9F9F9] border border-black/10 rounded-[2px] text-right"
+                  />
+                  {errors.phone && <p className="text-red-500 text-xs">{errors.phone.message}</p>}
+                </div>
+
+                {/* Wilaya */}
+                <div className="col-span-2 space-y-1">
+                  <div className="relative">
+                    <select
+                      onChange={handleCountryChange}
+                      defaultValue=""
+                      className={selectCls}
+                      required
+                      dir="rtl"
+                    >
+                      <option value="" disabled>اختر الولاية</option>
+                      {countries.map((c) => (
+                        <option key={c.id} value={String(c.id)}>{c.nameAr}</option>
+                      ))}
+                    </select>
+                    <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none">
+                      <ChevronDown size={20} className="text-black/40" />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Commune */}
+                {communes.length > 0 && (
+                  <div className="col-span-2 space-y-1">
+                    <div className="relative">
+                      <select
+                        {...register("commune")}
+                        required
+                        defaultValue=""
+                        className={selectCls}
+                        dir="rtl"
+                      >
+                        <option value="" disabled>اختر البلدية</option>
+                        {communes.map((cm) => (
+                          <option key={cm.id} value={String(cm.id)}>{cm.nameAr}</option>
+                        ))}
+                      </select>
+                      <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none">
+                        <ChevronDown size={20} className="text-black/40" />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Address ✅ restored */}
+                {/* <div className="col-span-2 space-y-1">
+                  <Input
+                    placeholder="العنوان"
+                    {...register("address")}
+                    className="h-14 bg-[#F9F9F9] border border-black/10 rounded-[2px] text-right"
+                  />
+                  {errors.address && <p className="text-red-500 text-xs">{errors.address.message}</p>}
+                </div> */}
+              </div>
+
+              {/* ── SIZE ──────────────────────────────────────────────────── */}
+              <div className="space-y-3">
+                <p className="text-[14px] text-black/40">اختر المقاس</p>
+                <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2">
+                  {(typeof product.sizeInfo === "string"
+                    ? JSON.parse(product.sizeInfo || "[]")
+                    : product.sizeInfo || ["XS", "S", "M", "L"]
+                  ).map((size: string) => (
+                    <button
+                      key={size}
+                      type="button"
+                      onClick={() => setValue("size", size)}
+                      className={`h-11 w-20 flex-shrink-0 flex items-center justify-center text-[14px] rounded-[2px] transition-all ${selectedSize === size ? "bg-[#B3A495] text-white" : "bg-[#E9E1D8] text-black/60"}`}
+                    >
+                      {size}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* ── COLORS ────────────────────────────────────────────────── */}
+              {colors.length > 0 && (
+                <div className="space-y-3">
+                  <p className="text-[14px] text-black/40">اختر اللون</p>
+                  <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2">
+                    {colors.map((color) => (
+                      <button
+                        key={color}
+                        type="button"
+                        onClick={() => { setSelectedColor(color); setValue("color", color); }}
+                        className={`relative h-11 w-11 rounded-1 border-2 transition-all flex-shrink-0 ${selectedColor === color ? "border-black scale-90" : "border-black/10"}`}
+                        style={{ backgroundColor: color }}
+                      >
+                        {selectedColor === color && (
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <div className="w-2 h-2 rounded-full bg-white" />
+                          </div>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* ── SHIPPING METHOD ───────────────────────────────────────── */}
+              {selectedCountry && (
+                <div className="space-y-3">
+                  <p className="text-[14px] text-black/40 text-right">اختر طريقة الشحن</p>
+                  <div className="space-y-2">
+                    <label className={`flex items-center justify-between gap-3 px-4 h-14 border rounded-[2px] cursor-pointer transition-all ${shippingType === "domicile" ? "border-[#B3A495] bg-[#F9F7F5]" : "border-black/10 bg-[#F9F9F9]"}`}>
+                      <div className="flex items-center gap-3">
+                        <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${shippingType === "domicile" ? "border-[#B3A495]" : "border-black/30"}`}>
+                          {shippingType === "domicile" && <div className="w-2.5 h-2.5 rounded-full bg-[#B3A495]" />}
+                        </div>
+                        <span className="text-[15px] font-medium text-black">A domicile</span>
+                      </div>
+                      {selectedCountry.price1 !== null
+                        ? <span className="text-[15px] font-bold text-[#B3A495]">{selectedCountry.price1} د.ج</span>
+                        : <span className="text-[13px] text-black/40">99.99 د.ج</span>}
+                      <input type="radio" className="hidden" checked={shippingType === "domicile"} onChange={() => { setShippingType("domicile"); setValue("shippingType", "domicile"); }} />
+                    </label>
+
+                    <label className={`flex items-center justify-between gap-3 px-4 h-14 border rounded-[2px] cursor-pointer transition-all ${shippingType === "bureau" ? "border-[#B3A495] bg-[#F9F7F5]" : "border-black/10 bg-[#F9F9F9]"}`}>
+                      <div className="flex items-center gap-3">
+                        <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${shippingType === "bureau" ? "border-[#B3A495]" : "border-black/30"}`}>
+                          {shippingType === "bureau" && <div className="w-2.5 h-2.5 rounded-full bg-[#B3A495]" />}
+                        </div>
+                        <span className="text-[15px] font-medium text-black">Bureau DHD</span>
+                      </div>
+                      {selectedCountry.price2 !== null
+                        ? <span className="text-[15px] font-bold text-[#B3A495]">{selectedCountry.price2} د.ج</span>
+                        : <span className="text-[13px] text-black/40">99.99 د.ج</span>}
+                      <input type="radio" className="hidden" checked={shippingType === "bureau"} onChange={() => { setShippingType("bureau"); setValue("shippingType", "bureau"); }} />
+                    </label>
+                  </div>
+                </div>
+              )}
+
+              {/* ── ORDER RECAP ───────────────────────────────────────────── */}
+              {showRecap && (
+                <div className="transition-all duration-500 ease-in-out animate-in fade-in slide-in-from-top-2" style={{ animationDuration: "400ms" }}>
+                  <OrderRecap
+                    product={product}
+                    quantity={quantity}
+                    selectedSize={selectedSize}
+                    selectedColor={selectedColor}
+                    shippingType={shippingType}
+                    selectedCountry={selectedCountry!}
+                    images={images}
+                    imageUrl={imageUrl}
+                    onQuantityChange={setQuantity}
+                  />
+                </div>
+              )}
+
+              {/* ── BUY BUTTON ────────────────────────────────────────────── */}
+              <div className="flex gap-4 items-center">
+                <Button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="flex-1 h-14 bg-[#B3A495] hover:bg-[#a39485] text-[20px] font-medium rounded-[2px]"
+                >
+                  {isSubmitting ? "جاري المعالجة..." : "اشتري الآن"}
+                </Button>
+                {!showRecap && (
+                  <div className="flex items-center border border-black/10 h-14">
+                    <button type="button" onClick={() => setQuantity((q) => (q > 1 ? q - 1 : 1))} className="w-12 h-full flex items-center justify-center hover:bg-black/5">
+                      <Minus size={16} />
+                    </button>
+                    <div className="w-12 h-full flex items-center justify-center text-[18px]">{quantity}</div>
+                    <button type="button" onClick={() => setQuantity((q) => q + 1)} className="w-12 h-full flex items-center justify-center hover:bg-black/5">
+                      <Plus size={16} />
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* ── FEATURES ──────────────────────────────────────────────── */}
+              {!showRecap && (
+                <div className="grid grid-cols-2 gap-4 pt-4">
+                  <div className="flex items-center justify-center gap-4 bg-black/5 py-5 rounded-[2px]">
+                    <HandHeart size={22} className="text-[#B3A495]" />
+                    <span className="text-[16px] font-medium">جودة عالية</span>
+                  </div>
+                  <div className="flex items-center justify-center gap-4 bg-black/5 py-5 rounded-[2px]">
+                    <ShieldCheck size={22} className="text-[#B3A495]" />
+                    <span className="text-[16px] font-medium">توصيل سريع</span>
+                  </div>
+                </div>
+              )}
+            </form>
+
+            {/* MOBILE ACCORDION */}
+            <div className="block md:hidden space-y-2 py-10">
+              {accordionItems.filter((_, i) => i !== 1).map((item, i) => (
+                <div key={i} className="border-b border-[#E9E9E9]">
+                  <button
+                    onClick={() => setOpenAccordionIndex(openAccordionIndex === i ? null : i)}
+                    className="flex w-full items-center justify-between py-6 text-right"
+                  >
+                    <span className="text-[20px] font-medium text-black">{item.title}</span>
+                    <ChevronDown className={`h-5 w-5 text-black transition-transform duration-500 ${openAccordionIndex === i ? "rotate-180" : ""}`} />
+                  </button>
+                  <div className={`overflow-hidden transition-all duration-500 ease-in-out ${openAccordionIndex === i ? "max-h-[1000px] opacity-100 pb-8" : "max-h-0 opacity-0"}`}>
+                    {item.content}
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* STICKY BUTTON */}
-      <div
-        className={`fixed bottom-0 left-0 right-0 p-4 bg-white/80 backdrop-blur-md border-t border-black/5 transition-all duration-500 z-[100] ${showStickyButton ? "translate-y-0 opacity-100" : "translate-y-full opacity-0"}`}
-      >
-        <Button
-          onClick={scrollToForm}
-          className="w-full h-14 bg-[#B3A495] hover:bg-[#a39485] text-[20px] font-medium rounded-[2px] shadow-lg"
-        >
-          اشتري الآن
-        </Button>
+        {/* STICKY BUTTON */}
+        <div className={`fixed bottom-0 left-0 right-0 p-4 bg-white/80 backdrop-blur-md border-t border-black/5 transition-all duration-500 z-[100] ${showStickyButton ? "translate-y-0 opacity-100" : "translate-y-full opacity-0"}`}>
+          <Button
+            onClick={scrollToForm}
+            className="w-full h-14 bg-[#B3A495] hover:bg-[#a39485] text-[20px] font-medium rounded-[2px] shadow-lg"
+          >
+            اشتري الآن
+          </Button>
+        </div>
       </div>
-    </div>
+    </>
   );
 }
