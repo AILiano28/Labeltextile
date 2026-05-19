@@ -22,7 +22,7 @@ import * as z from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { api, getImageUrl } from "@/lib/api";
-import { Product } from "@/types/api";
+import { Product, Review } from "@/types/api";
 
 import placeholderImage from "../../../public/assets/placeholder-image.svg";
 import Image from "next/image";
@@ -290,6 +290,9 @@ export function ProductImageCard({ product }: { product: Product }) {
   const [shippingType, setShippingType] = useState<"domicile" | "bureau">("domicile");
   const [selectedColor, setSelectedColor] = useState("");
 
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const [averageRating, setAverageRating] = useState("5.0");
+
   const imageColRef = useRef<HTMLDivElement>(null);
   const sectionRef = useRef<HTMLDivElement>(null);
   const swiperRef = useRef<any>(null);
@@ -299,6 +302,35 @@ export function ProductImageCard({ product }: { product: Product }) {
       document.documentElement.lang?.startsWith("ar"),
     );
   }, []);
+  console.log(product);
+  useEffect(() => {
+    const fetchReviews = async () => {
+      try {
+        const reviewsData = await api.filterReviews({
+          approved: true,
+          productId: product.id,
+        });
+
+        setReviews(reviewsData);
+
+        if (reviewsData.length > 0) {
+          const avg =
+            reviewsData.reduce(
+              (acc, review) => acc + Number(review.rating || 0),
+              0
+            ) / reviewsData.length;
+
+          setAverageRating(avg.toFixed(1));
+        }
+      } catch (error) {
+        console.error("Failed to fetch reviews:", error);
+      }
+    };
+
+    if (product?.id) {
+      fetchReviews();
+    }
+  }, [product?.id]);
 
   useEffect(() => {
     fetch("https://back.testwebapp.space/getCountries")
@@ -389,7 +421,7 @@ export function ProductImageCard({ product }: { product: Product }) {
     : 0;
 
   const selectedShippingMethod: string =
-    shippingType === "domicile" ? "A domicile" : "Bureau DHD";
+    shippingType === "domicile" ? "إلى باب المنزل" : "إلى المكتب";
 
   const onSubmit = async (data: FormValues) => {
     setIsSubmitting(true);
@@ -464,28 +496,30 @@ export function ProductImageCard({ product }: { product: Product }) {
       ];
 
   // ─── Accordion items ──────────────────────────────────────────────────────
-  const accordionItems = [
-    {
-      title: "دليل المقاسات",
-      content: product.tableImage ? (
-        <div className="w-full overflow-x-auto">
-          <Image
-            src={imageUrl(product.tableImage)}
-            alt="دليل المقاسات"
-            width={800}
-            height={600}
-            className="w-full h-auto rounded-[4px] object-contain"
-          />
-        </div>
-      ) : (
-        <p className="text-[16px] leading-[1.8] text-black/60">
-          لا يوجد دليل مقاسات متاح لهذا المنتج.
-        </p>
-      ),
-    },
+  const accordionItems = useMemo(() => {
+    const items = [...dynamicOtherInfoItems];
 
-    ...dynamicOtherInfoItems,
-  ];
+    // insert size guide at 2nd position (index 1)
+    if (product.tableImage) {
+      items.splice(1, 0, {
+        title: "دليل المقاسات",
+        content: (
+          <div className="w-full overflow-x-auto">
+            <Image
+              src={imageUrl(product.tableImage)}
+              alt="دليل المقاسات"
+              width={800}
+              height={600}
+              className="w-full h-auto rounded-[4px] object-contain"
+            />
+          </div>
+        ),
+      });
+    }
+
+    return items;
+  }, [dynamicOtherInfoItems, product.tableImage]);
+
   console.log(parsedOtherInfo);
   const scrollToForm = () => {
     document.getElementById("order-form")?.scrollIntoView({ behavior: "smooth" });
@@ -607,15 +641,19 @@ export function ProductImageCard({ product }: { product: Product }) {
                 )}
               </div>
               {product.description && (
-                <p className="block text-[15px] leading-[1.8] text-black/60 mb-6 text-right">
+                <p className="block text-[15px] leading-[1.8] text-black mb-6 text-right">
                   {product.description}
                 </p>
               )}
               <div className="flex items-center gap-2">
                 <span className="text-[14px] text-black/40">
-                  ({product.reviewsCount || 0} مراجعة)
+                  ({reviews.length} مراجعة)
                 </span>
-                <span className="text-[16px] font-medium text-black">{product.rating || 5.0}</span>
+
+                <span className="text-[16px] font-medium text-black">
+                  {averageRating}
+                </span>
+
                 <Star size={18} fill="#FFD700" className="text-[#FFD700]" />
               </div>
             </div>
@@ -720,14 +758,14 @@ export function ProductImageCard({ product }: { product: Product }) {
               {/* ── COLORS ────────────────────────────────────────────────── */}
               {colors.length > 0 && (
                 <div className="space-y-3">
-                  <p className="text-[14px] text-black/40">اختر اللون</p>
+                  <p className="text-[14px] text-black">اختر اللون</p>
                   <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2">
                     {colors.map((color) => (
                       <button
                         key={color}
                         type="button"
                         onClick={() => { setSelectedColor(color); setValue("color", color); }}
-                        className={`relative h-11 w-11 rounded-1 border-2 transition-all flex-shrink-0 ${selectedColor === color ? "border-black scale-90" : "border-black/10"}`}
+                        className={`relative h-11 w-11 rounded-full border-2 transition-all flex-shrink-0 ${selectedColor === color ? "border-black scale-90" : "border-black/10"}`}
                         style={{ backgroundColor: color }}
                       >
                         {selectedColor === color && (
@@ -744,17 +782,17 @@ export function ProductImageCard({ product }: { product: Product }) {
               {/* ── SHIPPING METHOD ───────────────────────────────────────── */}
               {selectedCountry && (
                 <div className="space-y-3">
-                  <p className="text-[14px] text-black/40 text-right">اختر طريقة الشحن</p>
+                  <p className="text-[14px] text-black text-right">اختر طريقة الشحن</p>
                   <div className="space-y-2">
                     <label className={`flex items-center justify-between gap-3 px-4 h-14 border rounded-[2px] cursor-pointer transition-all ${shippingType === "domicile" ? "border-[#B3A495] bg-[#F9F7F5]" : "border-black/10 bg-[#F9F9F9]"}`}>
                       <div className="flex items-center gap-3">
                         <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${shippingType === "domicile" ? "border-[#B3A495]" : "border-black/30"}`}>
                           {shippingType === "domicile" && <div className="w-2.5 h-2.5 rounded-full bg-[#B3A495]" />}
                         </div>
-                        <span className="text-[15px] font-medium text-black">A domicile</span>
+                        <span className="text-[15px] font-medium text-black">إلى باب المنزل</span>
                       </div>
                       {selectedCountry.price1 !== null
-                        ? <span className="text-[15px] font-bold text-[#B3A495]">{selectedCountry.price1} د.ج</span>
+                        ? <span className="text-[15px] font-bold text-gray-400">{selectedCountry.price1} د.ج</span>
                         : <span className="text-[13px] text-black/40">99.99 د.ج</span>}
                       <input type="radio" className="hidden" checked={shippingType === "domicile"} onChange={() => { setShippingType("domicile"); setValue("shippingType", "domicile"); }} />
                     </label>
@@ -764,10 +802,10 @@ export function ProductImageCard({ product }: { product: Product }) {
                         <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${shippingType === "bureau" ? "border-[#B3A495]" : "border-black/30"}`}>
                           {shippingType === "bureau" && <div className="w-2.5 h-2.5 rounded-full bg-[#B3A495]" />}
                         </div>
-                        <span className="text-[15px] font-medium text-black">Bureau DHD</span>
+                        <span className="text-[15px] font-medium text-black">إلى المكتب</span>
                       </div>
                       {selectedCountry.price2 !== null
-                        ? <span className="text-[15px] font-bold text-[#B3A495]">{selectedCountry.price2} د.ج</span>
+                        ? <span className="text-[15px] font-bold text-gray-400">{selectedCountry.price2} د.ج</span>
                         : <span className="text-[13px] text-black/40">99.99 د.ج</span>}
                       <input type="radio" className="hidden" checked={shippingType === "bureau"} onChange={() => { setShippingType("bureau"); setValue("shippingType", "bureau"); }} />
                     </label>
@@ -851,8 +889,8 @@ export function ProductImageCard({ product }: { product: Product }) {
 
                   <div
                     className={`overflow-hidden transition-all duration-500 ease-in-out ${openAccordionIndex === i
-                        ? "max-h-[1000px] opacity-100 pb-8"
-                        : "max-h-0 opacity-0"
+                      ? "max-h-[1000px] opacity-100 pb-8"
+                      : "max-h-0 opacity-0"
                       }`}
                   >
                     {item.content}
