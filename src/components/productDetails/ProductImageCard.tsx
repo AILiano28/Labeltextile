@@ -377,6 +377,8 @@ export function ProductImageCard({ product }: { product: Product }) {
   // ─── Parse colorsImages mapping ──────────────────────────────────────────
   const colorsImages: ColorImage[] = useMemo(() => {
     try {
+      // Handle undefined, null, already-parsed array, or JSON string
+      if (!product.colorsImages) return [];
       const parsed =
         typeof product.colorsImages === "string"
           ? JSON.parse(product.colorsImages)
@@ -386,7 +388,7 @@ export function ProductImageCard({ product }: { product: Product }) {
       return [];
     }
   }, [product.colorsImages]);
-
+  
   useEffect(() => {
     if (swiperRef.current) swiperRef.current.slideTo(selectedImageIndex);
   }, [selectedImageIndex]);
