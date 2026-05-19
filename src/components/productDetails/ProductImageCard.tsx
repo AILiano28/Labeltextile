@@ -63,6 +63,11 @@ interface OtherInfoItem {
   answer: string;
 }
 
+interface ColorImage {
+  color: number;
+  imageIndex: number;
+}
+
 // ─── Schema ───────────────────────────────────────────────────────────────────
 const formSchema = z.object({
   fullName: z.string().min(2, "الاسم الكامل مطلوب"),
@@ -296,13 +301,16 @@ export function ProductImageCard({ product }: { product: Product }) {
   const imageColRef = useRef<HTMLDivElement>(null);
   const sectionRef = useRef<HTMLDivElement>(null);
   const swiperRef = useRef<any>(null);
+
   useEffect(() => {
     setIsRTL(
       document.documentElement.dir === "rtl" ||
       document.documentElement.lang?.startsWith("ar"),
     );
   }, []);
+
   console.log(product);
+
   useEffect(() => {
     const fetchReviews = async () => {
       try {
@@ -365,6 +373,19 @@ export function ProductImageCard({ product }: { product: Product }) {
       return [];
     }
   }, [product.otherInfo]);
+
+  // ─── Parse colorsImages mapping ──────────────────────────────────────────
+  const colorsImages: ColorImage[] = useMemo(() => {
+    try {
+      const parsed =
+        typeof product.colorsImages === "string"
+          ? JSON.parse(product.colorsImages)
+          : product.colorsImages;
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }, [product.colorsImages]);
 
   useEffect(() => {
     if (swiperRef.current) swiperRef.current.slideTo(selectedImageIndex);
@@ -468,7 +489,6 @@ export function ProductImageCard({ product }: { product: Product }) {
     }
   };
 
-
   const parsedOtherInfo =
     typeof otherInfo === "string"
       ? JSON.parse(otherInfo)
@@ -521,20 +541,31 @@ export function ProductImageCard({ product }: { product: Product }) {
   }, [dynamicOtherInfoItems, product.tableImage]);
 
   console.log(parsedOtherInfo);
+
   const scrollToForm = () => {
     document.getElementById("order-form")?.scrollIntoView({ behavior: "smooth" });
   };
 
+  // ─── Parse colors from product.colors ────────────────────────────────────
   const colors: string[] = useMemo(() => {
     try {
       const parsed =
         typeof product.colors === "string" ? JSON.parse(product.colors) : product.colors;
       if (!Array.isArray(parsed)) return [];
-      return parsed.map((num: number) => `#${Number(num).toString(16).slice(-6)}`);
+      return parsed.map((num: number) => `#${Number(num).toString(16).padStart(6, "0").slice(-6)}`);
     } catch {
       return [];
     }
   }, [product.colors]);
+
+  // ─── Derive colors from colorsImages when product.colors is null ──────────
+  const derivedColors: string[] = useMemo(() => {
+    if (colors.length > 0) return colors;
+    if (colorsImages.length === 0) return [];
+    return colorsImages.map(
+      (ci) => `#${Number(ci.color).toString(16).padStart(8, "0").slice(-6)}`
+    );
+  }, [colors, colorsImages]);
 
   const selectCls =
     "w-full h-14 bg-[#F9F9F9] border border-black/10 rounded-[2px] text-right px-4 appearance-none outline-none focus:ring-1 focus:ring-[#B3A495] pr-4 pl-10";
@@ -714,7 +745,9 @@ export function ProductImageCard({ product }: { product: Product }) {
                       >
                         <option value="" disabled>اختر البلدية</option>
                         {communes.map((cm) => (
-                          <option key={cm.id} value={String(cm.id)}>{cm.nameAr}</option>
+                          <option key={cm.id} value={cm.nameAr}>
+                            {cm.nameAr}
+                          </option>
                         ))}
                       </select>
                       <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none">
@@ -723,21 +756,11 @@ export function ProductImageCard({ product }: { product: Product }) {
                     </div>
                   </div>
                 )}
-
-                {/* Address ✅ restored */}
-                {/* <div className="col-span-2 space-y-1">
-                  <Input
-                    placeholder="العنوان"
-                    {...register("address")}
-                    className="h-14 bg-[#F9F9F9] border border-black/10 rounded-[2px] text-right"
-                  />
-                  {errors.address && <p className="text-red-500 text-xs">{errors.address.message}</p>}
-                </div> */}
               </div>
 
               {/* ── SIZE ──────────────────────────────────────────────────── */}
               <div className="space-y-3">
-                <p className="text-[14px] text-black/40">اختر المقاس</p>
+                <p className="text-[14px] text-black">اختر المقاس</p>
                 <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2">
                   {(typeof product.sizeInfo === "string"
                     ? JSON.parse(product.sizeInfo || "[]")
@@ -756,15 +779,30 @@ export function ProductImageCard({ product }: { product: Product }) {
               </div>
 
               {/* ── COLORS ────────────────────────────────────────────────── */}
-              {colors.length > 0 && (
+              {derivedColors.length > 0 && (
                 <div className="space-y-3">
                   <p className="text-[14px] text-black">اختر اللون</p>
                   <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2">
-                    {colors.map((color) => (
+                    {derivedColors.map((color) => (
                       <button
                         key={color}
                         type="button"
-                        onClick={() => { setSelectedColor(color); setValue("color", color); }}
+                        onClick={() => {
+                          setSelectedColor(color);
+                          setValue("color", color);
+
+                          // Switch gallery to the image associated with this color
+                          const colorInt = parseInt(color.replace("#", ""), 16);
+                          const match = colorsImages.find((ci) => {
+                            // Compare last 6 hex digits to handle alpha-prefixed integers
+                            const ciHex = Number(ci.color).toString(16).slice(-6);
+                            const selHex = colorInt.toString(16).padStart(6, "0").slice(-6);
+                            return ciHex === selHex;
+                          });
+                          if (match !== undefined) {
+                            setSelectedImageIndex(match.imageIndex);
+                          }
+                        }}
                         className={`relative h-11 w-11 rounded-full border-2 transition-all flex-shrink-0 ${selectedColor === color ? "border-black scale-90" : "border-black/10"}`}
                         style={{ backgroundColor: color }}
                       >
@@ -910,7 +948,7 @@ export function ProductImageCard({ product }: { product: Product }) {
             اشتري الآن
           </Button>
         </div>
-      </div >
+      </div>
     </>
   );
 }

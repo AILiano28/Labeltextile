@@ -19,6 +19,7 @@ export interface Product {
   stock: number;
   favourite: boolean;
   sizeInfo: Record<string, unknown>;
+  colorsImages?: string | { color: number; imageIndex: number }[] | null;
   otherInfo: Record<string, unknown>;
   images: string | string[];
   tableImage: string;
