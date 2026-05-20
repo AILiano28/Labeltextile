@@ -281,6 +281,7 @@ const OrderRecap = ({
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 export function ProductImageCard({ product }: { product: Product }) {
+  console.log(product);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
