@@ -18,7 +18,7 @@ function BestSellerSkeleton() {
   );
 }
 
-const BestSellers = ({limit, excludeId}: {limit?: number, excludeId?: number}) => {
+const BestSellers = ({ limit, excludeId }: { limit?: number, excludeId?: number }) => {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -26,7 +26,7 @@ const BestSellers = ({limit, excludeId}: {limit?: number, excludeId?: number}) =
     const fetchBestSellers = async () => {
       try {
         const data = await api.filterProducts();
-        const filteredData = excludeId 
+        const filteredData = excludeId
           ? data.filter(p => p.id !== excludeId)
           : data;
         setProducts(limit ? filteredData.slice(0, limit) : filteredData);
@@ -49,8 +49,7 @@ const BestSellers = ({limit, excludeId}: {limit?: number, excludeId?: number}) =
               أفضل المبيعات
             </h2>
             <p className="text-[20px] font-medium text-black/70 leading-relaxed">
-              حيث تلتقي الموضة بالاستدامة حيث تلتقي الموضة بالاستدامة حيث تلتقي
-              الموضة بالاستدامة حيث تلتقي الموضة بالاستدامةحيث تلتقي الموضة
+              اكتشفي أكثر التصاميم طلبًا والأكثر حبًا من عملائنا. مجموعة مختارة من القطع المميزة التي تجمع بين الأناقة، الراحة والتفاصيل الراقية، لتمنحكِ إطلالة استثنائية تناسب كل لحظة ومناسبة. ✨
             </p>
           </div>
         </div>

@@ -253,7 +253,7 @@ const OrderRecap = ({
           <span className="text-[#B3A495] font-medium">{shippingPrice.toLocaleString()} د.ج</span>
           <span>
             التوصيل —{" "}
-            <span className="text-black/40 text-[12px]">{shippingType === "domicile" ? "إلى المنزل" : "مكتب DHD"}</span>
+            <span className="text-black/40 text-[12px]">{shippingType === "domicile" ? "إلى باب المنزل" : "إلى المكتب"}</span>
           </span>
         </div>
       </div>
