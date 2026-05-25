@@ -15,6 +15,7 @@ import {
   CheckCircle2,
 } from "lucide-react";
 
+import { trackFacebookEvent } from "@/lib/facebook";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -281,7 +282,6 @@ const OrderRecap = ({
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 export function ProductImageCard({ product }: { product: Product }) {
-  console.log(product);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -310,7 +310,6 @@ export function ProductImageCard({ product }: { product: Product }) {
     );
   }, []);
 
-  console.log(product);
 
   useEffect(() => {
     const fetchReviews = async () => {
@@ -389,7 +388,7 @@ export function ProductImageCard({ product }: { product: Product }) {
       return [];
     }
   }, [product.colorsImages]);
-  
+
   useEffect(() => {
     if (swiperRef.current) swiperRef.current.slideTo(selectedImageIndex);
   }, [selectedImageIndex]);
@@ -449,16 +448,50 @@ export function ProductImageCard({ product }: { product: Product }) {
 
   const onSubmit = async (data: FormValues) => {
     setIsSubmitting(true);
+
     const names = data.fullName.trim().split(/\s+/);
     const firstName = names[0];
     const lastName = names.slice(1).join(" ") || " ";
-    const colorInt = selectedColor ? parseInt(selectedColor.replace("#", ""), 16) : null;
+    const colorInt = selectedColor
+      ? parseInt(selectedColor.replace("#", ""), 16)
+      : null;
+
+    const productPrice = (product.discountPrice || product.price) * quantity;
+    const totalAmount = productPrice + selectedShippingPrice;
+
+    const selectedCommune = communes.find(
+      (cm) => cm.nameAr === data.commune || String(cm.id) === data.commune
+    );
 
     try {
+      await trackFacebookEvent({
+        eventName: "InitiateCheckout",
+        value: totalAmount,
+        currency: "DZD",
+        contentIds: [String(product.id)],
+        contentName: product.title,
+        contentType: "product",
+        contents: [
+          {
+            id: String(product.id),
+            quantity,
+            item_price: product.discountPrice || product.price,
+          },
+        ],
+        numItems: quantity,
+
+        phone: data.phone,
+        firstName,
+        lastName,
+        city: selectedCommune?.nameAr || data.commune || "",
+        state: selectedCountry?.nameAr || "",
+        country: "dz",
+      });
+
       await api.addOrder({
         productId: product.id,
         quantity,
-        totalAmount: (product.discountPrice || product.price) * quantity,
+        totalAmount: productPrice,
         size: data.size,
         name: firstName,
         surName: lastName,
@@ -474,7 +507,30 @@ export function ProductImageCard({ product }: { product: Product }) {
         selectedShippingMethod,
       });
 
-      // Show thank-you modal on success
+      await trackFacebookEvent({
+        eventName: "Purchase",
+        value: totalAmount,
+        currency: "DZD",
+        contentIds: [String(product.id)],
+        contentName: product.title,
+        contentType: "product",
+        contents: [
+          {
+            id: String(product.id),
+            quantity,
+            item_price: product.discountPrice || product.price,
+          },
+        ],
+        numItems: quantity,
+
+        phone: data.phone,
+        firstName,
+        lastName,
+        city: selectedCommune?.nameAr || data.commune || "",
+        state: selectedCountry?.nameAr || "",
+        country: "dz",
+      });
+
       setShowThankYou(true);
 
       reset();
@@ -543,8 +599,6 @@ export function ProductImageCard({ product }: { product: Product }) {
     return items;
   }, [dynamicOtherInfoItems, product.tableImage]);
 
-  console.log(parsedOtherInfo);
-
   const scrollToForm = () => {
     document.getElementById("order-form")?.scrollIntoView({ behavior: "smooth" });
   };
@@ -575,6 +629,26 @@ export function ProductImageCard({ product }: { product: Product }) {
 
   const showRecap = !!selectedCountry && !!selectedSize;
 
+  useEffect(() => {
+    if (!product?.id) return;
+
+    trackFacebookEvent({
+      eventName: "ViewContent",
+      value: product.discountPrice || product.price,
+      currency: "DZD",
+      contentIds: [String(product.id)],
+      contentName: product.title,
+      contentType: "product",
+      contents: [
+        {
+          id: String(product.id),
+          quantity: 1,
+          item_price: product.discountPrice || product.price,
+        },
+      ],
+      numItems: 1,
+    });
+  }, [product?.id]);
   return (
     <>
       {showThankYou && <ThankYouModal onClose={() => setShowThankYou(false)} />}
