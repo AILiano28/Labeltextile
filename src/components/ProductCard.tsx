@@ -55,12 +55,6 @@ export default function ProductCard({ product }: { product: Product }) {
 
           <Link
             href={`/productDetails/${product.id}`}
-            data-fb-event="AddToCart"
-            data-fb-value={product.discountPrice || product.price}
-            data-fb-currency="DZD"
-            data-fb-content-id={product.id}
-            data-fb-content-name={product.title}
-            data-fb-num-items="1"
             className="h-10 w-10 flex-shrink-0 rounded-full bg-[#F9F9F9] border border-black/5 flex items-center justify-center text-black hover:bg-black hover:text-white transition-all duration-300 shadow-sm"
             aria-label={product.title}
           >

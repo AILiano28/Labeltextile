@@ -10,6 +10,7 @@ export type FacebookEventData = {
   value?: number;
   currency?: string;
   contentIds?: string[];
+  contentCategory?: string;
   contentName?: string;
   contentType?: string;
   contents?: ContentItem[];
@@ -59,6 +60,10 @@ function createEventId(eventName: FacebookEventName) {
   return `${eventName}.${Date.now()}.${crypto.randomUUID()}`;
 }
 
+function getPixelMethod(eventName: FacebookEventName) {
+  return eventName === FB_EVENTS.VIEW_CATEGORY ? "trackCustom" : "track";
+}
+
 async function sendFacebookEvent(
   eventName: FacebookEventName,
   data: FacebookEventData = {}
@@ -79,6 +84,7 @@ async function sendFacebookEvent(
     value: data.value,
     currency,
     content_ids: data.contentIds,
+    content_category: data.contentCategory,
     content_name: data.contentName,
     content_type: contentType,
     contents: data.contents,
@@ -86,7 +92,7 @@ async function sendFacebookEvent(
     order_id: data.orderId,
   });
 
-  window.fbq?.("track", eventName, pixelData, { eventID: eventId });
+  window.fbq?.(getPixelMethod(eventName), eventName, pixelData, { eventID: eventId });
 
   try {
     const response = await fetch("/api/facebook", {

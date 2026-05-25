@@ -1,10 +1,8 @@
 export const FB_EVENTS = {
   PAGE_VIEW: "PageView",
-  VIEW_CONTENT: "ViewContent",
-  ADD_TO_CART: "AddToCart",
+  VIEW_CATEGORY: "ViewCategory",
   INITIATE_CHECKOUT: "InitiateCheckout",
   PURCHASE: "Purchase",
-  LEAD: "Lead",
 } as const;
 
 export type FacebookEventName =

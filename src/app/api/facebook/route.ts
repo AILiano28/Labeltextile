@@ -4,11 +4,9 @@ import { NextRequest, NextResponse } from "next/server";
 const FACEBOOK_API_VERSION = process.env.FACEBOOK_GRAPH_API_VERSION || "v23.0";
 const FACEBOOK_EVENTS = new Set([
   "PageView",
-  "ViewContent",
-  "AddToCart",
+  "ViewCategory",
   "InitiateCheckout",
   "Purchase",
-  "Lead",
 ]);
 
 type ContentItem = {
@@ -25,6 +23,7 @@ type FacebookPayload = {
   value?: number;
   currency?: string;
   contentIds?: string[];
+  contentCategory?: string;
   contentName?: string;
   contentType?: string;
   contents?: ContentItem[];
@@ -110,6 +109,7 @@ export async function POST(request: NextRequest) {
   const hasCustomData =
     body.value !== undefined ||
     body.contentIds?.length ||
+    body.contentCategory ||
     body.contentName ||
     body.contents?.length ||
     body.numItems !== undefined ||
@@ -119,6 +119,7 @@ export async function POST(request: NextRequest) {
     value: body.value,
     currency: body.currency || (hasCustomData ? "DZD" : undefined),
     content_ids: body.contentIds,
+    content_category: body.contentCategory,
     content_name: body.contentName,
     content_type: body.contentType || (body.contentIds?.length ? "product" : undefined),
     contents: body.contents,

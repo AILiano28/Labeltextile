@@ -15,7 +15,7 @@ import {
   CheckCircle2,
 } from "lucide-react";
 
-import { trackFacebookEvent } from "@/lib/facebook";
+import { FB_EVENTS, trackFacebookEvent } from "@/lib/facebook";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -302,6 +302,7 @@ export function ProductImageCard({ product }: { product: Product }) {
   const imageColRef = useRef<HTMLDivElement>(null);
   const sectionRef = useRef<HTMLDivElement>(null);
   const swiperRef = useRef<any>(null);
+  const checkoutStartedRef = useRef(false);
 
   useEffect(() => {
     setIsRTL(
@@ -464,30 +465,6 @@ export function ProductImageCard({ product }: { product: Product }) {
     );
 
     try {
-      await trackFacebookEvent({
-        eventName: "InitiateCheckout",
-        value: totalAmount,
-        currency: "DZD",
-        contentIds: [String(product.id)],
-        contentName: product.title,
-        contentType: "product",
-        contents: [
-          {
-            id: String(product.id),
-            quantity,
-            item_price: product.discountPrice || product.price,
-          },
-        ],
-        numItems: quantity,
-
-        phone: data.phone,
-        firstName,
-        lastName,
-        city: selectedCommune?.nameAr || data.commune || "",
-        state: selectedCountry?.nameAr || "",
-        country: "dz",
-      });
-
       await api.addOrder({
         productId: product.id,
         quantity,
@@ -508,7 +485,7 @@ export function ProductImageCard({ product }: { product: Product }) {
       });
 
       await trackFacebookEvent({
-        eventName: "Purchase",
+        eventName: FB_EVENTS.PURCHASE,
         value: totalAmount,
         currency: "DZD",
         contentIds: [String(product.id)],
@@ -534,6 +511,7 @@ export function ProductImageCard({ product }: { product: Product }) {
       setShowThankYou(true);
 
       reset();
+      checkoutStartedRef.current = false;
       setQuantity(1);
       setSelectedCountry(null);
       setSelectedColor("");
@@ -603,6 +581,31 @@ export function ProductImageCard({ product }: { product: Product }) {
     document.getElementById("order-form")?.scrollIntoView({ behavior: "smooth" });
   };
 
+  const trackCheckoutStarted = () => {
+    if (checkoutStartedRef.current) return;
+    checkoutStartedRef.current = true;
+
+    const productPrice = (product.discountPrice || product.price) * quantity;
+
+    void trackFacebookEvent({
+      eventName: FB_EVENTS.INITIATE_CHECKOUT,
+      value: productPrice + selectedShippingPrice,
+      currency: "DZD",
+      contentIds: [String(product.id)],
+      contentName: product.title,
+      contentType: "product",
+      contents: [
+        {
+          id: String(product.id),
+          quantity,
+          item_price: product.discountPrice || product.price,
+        },
+      ],
+      numItems: quantity,
+      country: "dz",
+    });
+  };
+
   // ─── Parse colors from product.colors ────────────────────────────────────
   const colors: string[] = useMemo(() => {
     try {
@@ -629,26 +632,6 @@ export function ProductImageCard({ product }: { product: Product }) {
 
   const showRecap = !!selectedCountry && !!selectedSize;
 
-  useEffect(() => {
-    if (!product?.id) return;
-
-    trackFacebookEvent({
-      eventName: "ViewContent",
-      value: product.discountPrice || product.price,
-      currency: "DZD",
-      contentIds: [String(product.id)],
-      contentName: product.title,
-      contentType: "product",
-      contents: [
-        {
-          id: String(product.id),
-          quantity: 1,
-          item_price: product.discountPrice || product.price,
-        },
-      ],
-      numItems: 1,
-    });
-  }, [product?.id]);
   return (
     <>
       {showThankYou && <ThankYouModal onClose={() => setShowThankYou(false)} />}
@@ -766,7 +749,11 @@ export function ProductImageCard({ product }: { product: Product }) {
               </div>
             </div>
 
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 w-full">
+            <form
+              onSubmit={handleSubmit(onSubmit)}
+              onInputCapture={trackCheckoutStarted}
+              className="space-y-6 w-full"
+            >
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Full Name */}
                 <div className="space-y-1 col-span-2">

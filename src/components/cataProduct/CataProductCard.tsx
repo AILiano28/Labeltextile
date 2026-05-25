@@ -73,11 +73,13 @@ export default function CataProductCard({
                           {product.title}
                         </h3>
                       </Link>
-                      <button
+                      <Link
+                        href={`/productDetails/${product.id}`}
                         className="h-10 w-10 flex-shrink-0 rounded-full bg-[#F9F9F9] border border-black/5 flex items-center justify-center text-black hover:bg-black hover:text-white transition-all duration-300 shadow-sm"
+                        aria-label={product.title}
                       >
                         <ShoppingBag size={20} />
-                      </button>
+                      </Link>
                     </div>
                     <div className="text-right">
                       <p className="text-xl font-bold text-black">
