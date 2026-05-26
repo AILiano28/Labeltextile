@@ -70,6 +70,7 @@ export default function RootLayout({
     (window, document,'script',
     'https://connect.facebook.net/en_US/fbevents.js');
 
+    fbq('set', 'autoConfig', false, '${pixelId}');
     fbq('init', '${pixelId}');
   `}
           </Script>
