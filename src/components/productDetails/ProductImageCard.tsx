@@ -283,6 +283,7 @@ function OrderSummary({
   subtotal,
   shippingPrice,
   shippingLabel,
+  onChangeSize,
 }: {
   title: string;
   size: string;
@@ -290,6 +291,7 @@ function OrderSummary({
   subtotal: number;
   shippingPrice: number | null;
   shippingLabel: string | null;
+  onChangeSize: () => void;
 }) {
   const total = shippingPrice !== null ? subtotal + shippingPrice : null;
   return (
@@ -298,10 +300,24 @@ function OrderSummary({
         <dt className="min-w-0">
           المنتج
           <span className="block truncate text-[13.5px] text-lt-desc">
-            {title} · {size} × {quantity}
+            {title} × {quantity}
           </span>
         </dt>
         <dd className="shrink-0 tabular-nums">{formatDZD(subtotal)}</dd>
+      </div>
+      <div className="-my-1.5 flex items-center justify-between gap-4">
+        <dt>
+          المقاس: <span className="font-semibold">{size}</span>
+        </dt>
+        <dd>
+          <button
+            type="button"
+            onClick={onChangeSize}
+            className="inline-flex min-h-11 items-center px-1 text-[14px] text-lt-espresso underline decoration-lt-taupe underline-offset-[6px]"
+          >
+            تغيير المقاس
+          </button>
+        </dd>
       </div>
       <div className="flex justify-between gap-4">
         <dt className="min-w-0">
@@ -796,8 +812,9 @@ export function ProductImageCard({ product }: { product: Product }) {
       : null;
 
   // One sticky bar on mobile; it hides while the order form is on screen.
+  // Starts visible so it is in the server HTML: on slow phones it shows before JavaScript runs.
   const formRef = useRef<HTMLDivElement>(null);
-  const [formVisible, setFormVisible] = useState(true);
+  const [formVisible, setFormVisible] = useState(false);
   useEffect(() => {
     const el = formRef.current;
     if (!el) return;
@@ -845,9 +862,14 @@ export function ProductImageCard({ product }: { product: Product }) {
                     {formatDZD(product.price)}
                   </s>
                   {discount !== null && (
-                    <span dir="ltr" className="rounded-[2px] bg-lt-blush px-2 py-0.5 text-[13px] font-medium tabular-nums text-lt-brown">
-                      −{discount}%
-                    </span>
+                    <>
+                      <span dir="ltr" className="rounded-[2px] bg-lt-blush px-2 py-0.5 text-[13px] font-medium tabular-nums text-lt-brown">
+                        −{discount}%
+                      </span>
+                      <span className="text-[13.5px] font-medium tabular-nums text-lt-brown">
+                        وفّري {formatDZD(product.price - product.discountPrice)}
+                      </span>
+                    </>
                   )}
                 </>
               ) : null}
@@ -860,7 +882,9 @@ export function ProductImageCard({ product }: { product: Product }) {
               )}
             </div>
 
-            <ul className="mt-5 space-y-3 border-y border-lt-line py-4">
+            <p className="mt-2.5 text-[13.5px] leading-[1.6] text-lt-desc">سعر التوصيل يظهر حسب ولايتك قبل تأكيد الطلب.</p>
+
+            <ul className="mt-4 space-y-3 border-y border-lt-line py-4">
               {[
                 { Icon: Banknote, label: "الدفع عند الاستلام" },
                 { Icon: PackageOpen, label: "افتحي الطرد قبل الدفع" },
@@ -1137,6 +1161,11 @@ export function ProductImageCard({ product }: { product: Product }) {
                   shippingLabel={
                     selectedCountry ? `${selectedShippingMethod}، ${selectedCountry.nameAr}` : null
                   }
+                  onChangeSize={() => {
+                    const el = document.getElementById("pdp-size");
+                    el?.scrollIntoView({ behavior: "smooth", block: "center" });
+                    el?.querySelector<HTMLButtonElement>('[role="radio"][aria-checked="true"]')?.focus({ preventScroll: true });
+                  }}
                 />
 
                 <div className="space-y-3">
@@ -1192,7 +1221,7 @@ export function ProductImageCard({ product }: { product: Product }) {
         {/* ── STICKY BAR (mobile, single) ──────────────────────────────── */}
         <div
           inert={formVisible}
-          className={`fixed inset-x-0 bottom-0 z-[100] border-t border-lt-line bg-lt-ivory px-4 pt-2.5 pb-[max(0.625rem,env(safe-area-inset-bottom))] transition-transform duration-300 md:hidden ${
+          className={`pdp-sticky-cta fixed inset-x-0 bottom-0 z-[100] border-t border-lt-line bg-lt-ivory px-4 pt-2.5 pb-[max(0.625rem,env(safe-area-inset-bottom))] transition-transform duration-300 md:hidden ${
             formVisible ? "translate-y-full" : "translate-y-0"
           }`}
         >
@@ -1201,13 +1230,17 @@ export function ProductImageCard({ product }: { product: Product }) {
               <p className="truncate">{product.title}</p>
               <p className="mt-0.5 text-[17px] font-semibold tabular-nums text-lt-espresso">{formatDZD(unitPrice)}</p>
             </div>
-            <button
-              type="button"
-              onClick={scrollToForm}
+            {/* A link, so it jumps to the form even before JavaScript has loaded; afterwards it scrolls smoothly. */}
+            <a
+              href="#order-form"
+              onClick={(e) => {
+                e.preventDefault();
+                scrollToForm();
+              }}
               className="flex h-[52px] flex-1 items-center justify-center bg-lt-espresso text-[16px] font-semibold text-lt-ivory"
             >
               اطلبي الآن
-            </button>
+            </a>
           </div>
         </div>
       </div>

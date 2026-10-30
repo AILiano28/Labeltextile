@@ -4,6 +4,7 @@ import { ProductReviews } from "@/components/productDetails/ProductReviews";
 import { api } from "@/lib/api";
 import type { Review } from "@/types/api";
 import Link from "next/link";
+import { preload } from "react-dom";
 import { ToastProvider } from "@/components/ToastProvider";
 import { naskh, plexArabic } from "@/components/productDetails/pdpFonts";
 import "@/components/productDetails/pdp.css";
@@ -13,6 +14,11 @@ export default async function Page({
 }: {
   params: Promise<{ slug: string }>;
 }) {
+  // Start downloading wilayas and delivery prices with the HTML, in parallel with the JavaScript.
+  // Same URL, mode and credentials as the browser fetch in ProductImageCard, so that fetch reuses it.
+  // Low priority so the main product photo still downloads first.
+  preload("https://back.testwebapp.space/getCountries", { as: "fetch", crossOrigin: "anonymous", fetchPriority: "low" });
+
   const { slug } = await params;
   const productId = parseInt(slug) || 1;
 

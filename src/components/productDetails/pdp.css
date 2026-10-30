@@ -12,3 +12,9 @@
 .pdp-root .pdp-logo * {
   font-family: var(--font-lt-logo), sans-serif !important;
 }
+
+/* Sticky order bar: hidden while a checkout field has focus, so it never sits on top of the field
+   or the on-screen keyboard. Pure CSS, so it also works before JavaScript has loaded. */
+.pdp-root:has(#order-form :focus) .pdp-sticky-cta {
+  visibility: hidden;
+}
