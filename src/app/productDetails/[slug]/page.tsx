@@ -1,10 +1,11 @@
-import BestSellers from "@/components/home/components/BestSellers";
+import PdpBestSellers from "@/components/productDetails/PdpBestSellers";
 import { ProductImageCard } from "@/components/productDetails/ProductImageCard";
 import { ProductReviews } from "@/components/productDetails/ProductReviews";
 import { api } from "@/lib/api";
 import Link from "next/link";
 import { ToastProvider } from "@/components/ToastProvider";
-import { MobileOrderButton } from "@/components/productDetails/MobileOrderButton";
+import { naskh, plexArabic } from "@/components/productDetails/pdpFonts";
+import "@/components/productDetails/pdp.css";
 
 export default async function Page({
   params,
@@ -28,28 +29,31 @@ export default async function Page({
     );
 
   return (
-    <div className="container mx-auto space-y-16 mt-20 md:mt-44 relative px-6">
+    <div className={`pdp-root ${plexArabic.variable} ${naskh.variable} bg-lt-ivory text-lt-espresso`}>
       <ToastProvider />
-      <ProductImageCard product={product} />
 
-      <ProductReviews initialReviews={reviews} productId={productId} />
+      {/* Full-bleed gallery on mobile; the single sticky order bar lives inside ProductImageCard. */}
+      <div className="mx-auto max-w-7xl pt-[70px] md:px-8 md:pt-44 lg:px-12">
+        <ProductImageCard product={product} />
+      </div>
 
-      <BestSellers limit={3} excludeId={productId} />
+      <div className="mx-auto mt-14 max-w-7xl border-t border-lt-line px-6 pt-12 md:px-8 lg:px-12">
+        <ProductReviews initialReviews={reviews} productId={productId} />
+      </div>
+
+      <div className="mx-auto mt-14 max-w-7xl border-t border-lt-line pt-12 md:px-8 lg:px-12">
+        <PdpBestSellers excludeId={productId} />
+      </div>
 
       {/* Explore More Section */}
-      <section className="flex flex-col items-center mt-4 mb-24">
+      <section className="flex flex-col items-center px-4 pt-12 pb-28 md:pb-20">
         <Link
           href="/cataProducts"
-          className="bg-[#B3A495] text-white px-12 py-4 rounded-[4px] text-[16px] font-medium hover:bg-[#a39485] transition-all transform hover:scale-105 active:scale-95 shadow-lg shadow-[#B3A495]/20"
+          className="inline-flex h-[52px] w-full max-w-sm items-center justify-center border border-lt-espresso text-[16px] font-medium text-lt-espresso transition-colors hover:bg-lt-espresso hover:text-lt-ivory"
         >
           اكتشف مجموعتنا
         </Link>
       </section>
-
-      {/* Fixed Mobile Order Button (Client logic inside the component) */}
-      <MobileOrderButton />
     </div>
   );
 }
-
-// Small client component for the mobile button to keep the page server-side

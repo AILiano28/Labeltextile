@@ -1,0 +1,14 @@
+/* Product page: Arabic faces scoped to .pdp-root.
+   globals.css sets `* { font-family: poppins !important }`, so these rules must be !important too. */
+.pdp-root,
+.pdp-root * {
+  font-family: var(--font-pdp-sans), sans-serif !important;
+}
+.pdp-root .pdp-display {
+  font-family: var(--font-pdp-display), var(--font-pdp-sans), serif !important;
+}
+/* The LABELTEXTILE wordmark in the order success modal keeps its Montserrat face. */
+.pdp-root .pdp-logo,
+.pdp-root .pdp-logo * {
+  font-family: var(--font-lt-logo), sans-serif !important;
+}
