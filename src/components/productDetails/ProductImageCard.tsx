@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 
 import { FB_EVENTS, trackFacebookEvent } from "@/lib/facebook";
-import { useForm } from "react-hook-form";
+import { useForm, type FieldErrors } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 
@@ -36,6 +36,8 @@ const montserrat = Montserrat({
   weight: ["200", "300"],
   // Used by .pdp-logo in pdp.css, which outranks the page-wide font rules.
   variable: "--font-lt-logo",
+  // Only the order success modal uses it: not preloaded.
+  preload: false,
 });
 
 const formatDZD = (amount: number) =>
@@ -134,7 +136,9 @@ const formSchema = z
       .string()
       .refine((v) => v.trim().length > 0, "رقم الهاتف مطلوب")
       .refine((v) => !v.trim() || DZ_PHONE.test(normalizePhone(v)), "رقم الهاتف غير صحيح. مثال: 0555 12 34 56"),
-    size: z.string().min(1, "المقاس مطلوب"),
+    size: z.string().optional(),
+    // The sizes this product really offers (backend sizeInfo). Set by the form, never sent.
+    availableSizes: z.array(z.string()).optional(),
     color: z.string().optional(),
     // A disabled select (wilayas still loading or unavailable) reports undefined, hence `error`.
     country: z.string({ error: "اختاري الولاية" }).min(1, "اختاري الولاية"),
@@ -146,6 +150,13 @@ const formSchema = z
     shippingAvailable: z.boolean().optional(),
   })
   .superRefine((d, ctx) => {
+    // Only a size the product offers can be ordered; there is no default size.
+    if (d.availableSizes && d.availableSizes.length > 0) {
+      if (!d.size) ctx.addIssue({ code: "custom", path: ["size"], message: "اختاري المقاس" });
+      else if (!d.availableSizes.includes(d.size)) {
+        ctx.addIssue({ code: "custom", path: ["size"], message: "هذا المقاس غير متوفر، اختاري مقاسًا آخر" });
+      }
+    }
     if (d.communeRequired && !d.commune) {
       ctx.addIssue({ code: "custom", path: ["commune"], message: "اختاري البلدية" });
     }
@@ -307,7 +318,7 @@ function OrderSummary({
       </div>
       <div className="-my-1.5 flex items-center justify-between gap-4">
         <dt>
-          المقاس: <span className="font-semibold">{size}</span>
+          المقاس: <span className="font-semibold">{size || "—"}</span>
         </dt>
         <dd>
           <button
@@ -315,7 +326,7 @@ function OrderSummary({
             onClick={onChangeSize}
             className="inline-flex min-h-11 items-center px-1 text-[14px] text-lt-espresso underline decoration-lt-taupe underline-offset-[6px]"
           >
-            تغيير المقاس
+            {size ? "تغيير المقاس" : "اختاري المقاس"}
           </button>
         </dd>
       </div>
@@ -519,6 +530,12 @@ export function ProductImageCard({ product }: { product: Product }) {
     }
   }, [product.images]);
 
+  // Gallery shows each image file once: an entry repeating an earlier file path is hidden.
+  // Display only; product data and files are unchanged.
+  const galleryImages = useMemo(() => [...new Set(images)], [images]);
+  // Colour links use positions in product.images; map them to the position in the shown gallery.
+  const displayIndexOf = (originalIndex: number) => Math.max(0, galleryImages.indexOf(images[originalIndex]));
+
   const otherInfo: OtherInfoItem[] = useMemo(() => {
     try {
       if (!product.otherInfo) return [];
@@ -549,10 +566,21 @@ export function ProductImageCard({ product }: { product: Product }) {
 
 
 
+  // Sizes the product really offers, from the backend. No invented fallback list.
+  const sizes: string[] = useMemo(() => {
+    try {
+      const raw = typeof product.sizeInfo === "string" ? JSON.parse(product.sizeInfo || "[]") : product.sizeInfo;
+      return Array.isArray(raw) ? [...new Set(raw.map((s) => String(s).trim()).filter(Boolean))] : [];
+    } catch {
+      return [];
+    }
+  }, [product.sizeInfo]);
+
   const {
     register,
     handleSubmit,
     setValue,
+    setFocus,
     watch,
     reset,
     trigger,
@@ -561,10 +589,13 @@ export function ProductImageCard({ product }: { product: Product }) {
     resolver: zodResolver(formSchema),
     // Inline validation: a field is checked when it loses focus, then on every change.
     mode: "onTouched",
+    // Focus is handled in onInvalid: the size picker sits above the form and is not an input.
+    shouldFocusError: false,
     defaultValues: {
       fullName: "",
       phone: "",
-      size: "S",
+      size: "",
+      availableSizes: sizes,
       country: "",
       commune: "",
       shippingType: "domicile",
@@ -653,7 +684,7 @@ export function ProductImageCard({ product }: { product: Product }) {
         productId: product.id,
         quantity,
         totalAmount: productPrice,
-        size: data.size,
+        size: data.size ?? "",
         name: firstName,
         surName: lastName,
         city: data.commune || data.country || "",
@@ -744,6 +775,23 @@ export function ProductImageCard({ product }: { product: Product }) {
     document.getElementById("order-form")?.scrollIntoView({ behavior: "smooth" });
   };
 
+  // Brings the size picker into view and focuses the chosen size (or the first one).
+  const scrollToSize = () => {
+    const el = document.getElementById("pdp-size");
+    el?.scrollIntoView({ behavior: "smooth", block: "center" });
+    const target =
+      el?.querySelector<HTMLButtonElement>('[role="radio"][aria-checked="true"]') ??
+      el?.querySelector<HTMLButtonElement>('[role="radio"]');
+    target?.focus({ preventScroll: true });
+  };
+
+  // Invalid submit: show the first problem in page order (the size picker is above the form).
+  const onInvalid = (errs: FieldErrors<FormValues>) => {
+    if (errs.size) return scrollToSize();
+    const first = (["fullName", "phone", "country", "commune"] as const).find((k) => errs[k]);
+    if (first) setFocus(first);
+  };
+
   const trackCheckoutStarted = () => {
     if (checkoutStartedRef.current) return;
     checkoutStartedRef.current = true;
@@ -798,11 +846,6 @@ export function ProductImageCard({ product }: { product: Product }) {
   const chosenPrice = priceFor(selectedCountry, shippingType);
   const summaryShipping = selectedCountry && isValidPrice(chosenPrice) ? chosenPrice : null;
 
-  const sizes: string[] =
-    typeof product.sizeInfo === "string"
-      ? JSON.parse(product.sizeInfo || "[]")
-      : product.sizeInfo || ["XS", "S", "M", "L"];
-
   const unitPrice = product.discountPrice || product.price;
   // The backend stores an empty subtitle as the string "null".
   const subTitle = product.subTitle && product.subTitle !== "null" ? product.subTitle : null;
@@ -836,7 +879,7 @@ export function ProductImageCard({ product }: { product: Product }) {
           {/* ── GALLERY ─────────────────────────────────────────────────── */}
           <div className="md:sticky md:top-28">
             <PdpGallery
-              images={images}
+              images={galleryImages}
               imageUrl={imageUrl}
               title={product.title}
               selectedImageIndex={selectedImageIndex}
@@ -907,7 +950,7 @@ export function ProductImageCard({ product }: { product: Product }) {
             <div id="pdp-size" className="mt-8 scroll-mt-28">
               <div className="mb-3 flex items-center justify-between">
                 <p id="pdp-size-label" className="text-[15px] font-semibold">
-                  المقاس: <span className="ms-0.5 font-normal text-lt-muted">{selectedSize}</span>
+                  المقاس: <span className="ms-0.5 font-normal text-lt-muted">{selectedSize || "اختاري مقاسك"}</span>
                 </p>
                 {product.tableImage && (
                   <button
@@ -922,7 +965,13 @@ export function ProductImageCard({ product }: { product: Product }) {
                   </button>
                 )}
               </div>
-              <div role="radiogroup" aria-labelledby="pdp-size-label" className="grid grid-cols-6 gap-2">
+              <div
+                role="radiogroup"
+                aria-labelledby="pdp-size-label"
+                aria-invalid={!!errors.size}
+                aria-describedby={errors.size ? "err-size" : undefined}
+                className="grid grid-cols-6 gap-2"
+              >
                 {sizes.map((size: string) => {
                   const selected = selectedSize === size;
                   return (
@@ -931,11 +980,13 @@ export function ProductImageCard({ product }: { product: Product }) {
                       type="button"
                       role="radio"
                       aria-checked={selected}
-                      onClick={() => setValue("size", size)}
+                      onClick={() => setValue("size", size, { shouldValidate: isSubmitted })}
                       className={`h-12 border text-[15px] font-medium tabular-nums transition-colors ${
                         selected
                           ? "border-lt-espresso bg-lt-espresso text-lt-ivory"
-                          : "border-lt-line bg-white hover:border-lt-espresso"
+                          : errors.size
+                            ? "border-lt-error bg-white"
+                            : "border-lt-line bg-white hover:border-lt-espresso"
                       }`}
                     >
                       {size}
@@ -943,7 +994,7 @@ export function ProductImageCard({ product }: { product: Product }) {
                   );
                 })}
               </div>
-              {errors.size && <p className="mt-2 text-[13px] text-lt-error">{errors.size.message}</p>}
+              <FieldError id="err-size" message={errors.size?.message} />
               {guideOpen && product.tableImage && (
                 <div id="pdp-size-guide" className="mt-3 bg-lt-sand p-2">
                   <Image
@@ -982,7 +1033,7 @@ export function ProductImageCard({ product }: { product: Product }) {
                           return ciHex === selHex;
                         });
                         if (match !== undefined) {
-                          setSelectedImageIndex(match.imageIndex);
+                          setSelectedImageIndex(displayIndexOf(match.imageIndex));
                         }
                       }}
                       className={`relative size-11 shrink-0 rounded-full border-2 transition-all ${selectedColor === color ? "scale-90 border-lt-espresso" : "border-black/10"}`}
@@ -1006,7 +1057,7 @@ export function ProductImageCard({ product }: { product: Product }) {
 
               <form
                 noValidate
-                onSubmit={handleSubmit(onSubmit)}
+                onSubmit={handleSubmit(onSubmit, onInvalid)}
                 onInputCapture={trackCheckoutStarted}
                 className="mt-6 space-y-5"
               >
@@ -1154,18 +1205,14 @@ export function ProductImageCard({ product }: { product: Product }) {
 
                 <OrderSummary
                   title={product.title}
-                  size={selectedSize}
+                  size={selectedSize ?? ""}
                   quantity={quantity}
                   subtotal={subtotal}
                   shippingPrice={summaryShipping}
                   shippingLabel={
                     selectedCountry ? `${selectedShippingMethod}، ${selectedCountry.nameAr}` : null
                   }
-                  onChangeSize={() => {
-                    const el = document.getElementById("pdp-size");
-                    el?.scrollIntoView({ behavior: "smooth", block: "center" });
-                    el?.querySelector<HTMLButtonElement>('[role="radio"][aria-checked="true"]')?.focus({ preventScroll: true });
-                  }}
+                  onChangeSize={scrollToSize}
                 />
 
                 <div className="space-y-3">

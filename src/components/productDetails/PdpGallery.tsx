@@ -120,6 +120,8 @@ export default function PdpGallery({
                 fill
                 quality={75}
                 priority={index === 0}
+                // The first photo is the page's main image: fetch it before fonts and other photos.
+                fetchPriority={index === 0 ? "high" : "low"}
                 sizes="(min-width: 768px) 55vw, 100vw"
                 className="object-contain select-none"
                 draggable={false}
@@ -166,7 +168,7 @@ export default function PdpGallery({
                     active ? "border-lt-espresso" : "border-transparent"
                   }`}
                 >
-                  <Image src={imageUrl(img)} alt="" fill sizes="56px" quality={75} className="object-cover" />
+                  <Image src={imageUrl(img)} alt="" fill sizes="56px" quality={75} loading="lazy" fetchPriority="low" className="object-cover" />
                 </button>
               );
             })}

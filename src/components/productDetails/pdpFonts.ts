@@ -13,6 +13,8 @@ export const naskh = Noto_Naskh_Arabic({
   weight: ["500", "600"],
   display: "swap",
   variable: "--font-pdp-display",
+  // Headings only: not preloaded, so it doesn't compete with the hero photo (it still loads, then swaps in).
+  preload: false,
   // No metric-adjusted serif fallback: Latin titles fall through to IBM Plex instead.
   adjustFontFallback: false,
   fallback: [],
