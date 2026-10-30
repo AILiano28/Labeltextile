@@ -48,7 +48,7 @@ export default async function Page({
         <ProductImageCard product={product} />
       </div>
 
-      <div className="mx-auto mt-14 max-w-7xl border-t border-lt-line px-6 pt-12 md:px-8 lg:px-12">
+      <div className="mx-auto mt-12 max-w-7xl border-t border-lt-line px-4 pt-10 md:px-8 lg:px-12">
         <ProductReviews initialReviews={reviews} productId={productId} />
       </div>
 

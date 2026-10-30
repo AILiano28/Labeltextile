@@ -26,10 +26,10 @@ import { withRetry } from "@/lib/retry";
 import { Product, Review } from "@/types/api";
 
 import placeholderImage from "../../../public/assets/placeholder-image.svg";
-import Image from "next/image";
 
 import { Montserrat } from "next/font/google";
-import PdpGallery from "./PdpGallery";
+import PdpGallery, { ZoomViewer } from "./PdpGallery";
+import { reviewCountLabel } from "./reviewCount";
 
 const montserrat = Montserrat({
   subsets: ["latin"],
@@ -917,11 +917,18 @@ export function ProductImageCard({ product }: { product: Product }) {
                 </>
               ) : null}
               {reviews.length > 0 && (
-                <span className="ms-auto inline-flex items-center gap-1 text-[14px]">
+                <a
+                  href="#reviews"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    document.getElementById("reviews")?.scrollIntoView({ behavior: "smooth", block: "start" });
+                  }}
+                  className="ms-auto -my-2.5 inline-flex min-h-11 items-center gap-1 text-[14px] text-lt-espresso"
+                >
                   <Star size={15} fill="#A78D77" className="text-lt-taupe" aria-hidden />
                   {averageRating}
-                  <span className="text-lt-muted">({reviews.length} مراجعة)</span>
-                </span>
+                  <span className="text-lt-desc underline decoration-lt-taupe underline-offset-4">({reviewCountLabel(reviews.length)})</span>
+                </a>
               )}
             </div>
 
@@ -955,9 +962,8 @@ export function ProductImageCard({ product }: { product: Product }) {
                 {product.tableImage && (
                   <button
                     type="button"
-                    onClick={() => setGuideOpen((o) => !o)}
-                    aria-expanded={guideOpen}
-                    aria-controls="pdp-size-guide"
+                    onClick={() => setGuideOpen(true)}
+                    aria-haspopup="dialog"
                     className="inline-flex min-h-11 items-center gap-1.5 text-[14px] text-lt-espresso underline decoration-lt-taupe underline-offset-[6px]"
                   >
                     <Ruler size={16} aria-hidden />
@@ -995,17 +1001,17 @@ export function ProductImageCard({ product }: { product: Product }) {
                 })}
               </div>
               <FieldError id="err-size" message={errors.size?.message} />
+              {/* Size guide: full screen with tap-to-zoom (3×), so the chart is readable on a phone. */}
               {guideOpen && product.tableImage && (
-                <div id="pdp-size-guide" className="mt-3 bg-lt-sand p-2">
-                  <Image
-                    src={imageUrl(product.tableImage)}
-                    alt="دليل المقاسات"
-                    width={800}
-                    height={600}
-                    sizes="(min-width: 768px) 460px, 100vw"
-                    className="h-auto w-full object-contain"
-                  />
-                </div>
+                <ZoomViewer
+                  images={[product.tableImage]}
+                  imageUrl={imageUrl}
+                  title="دليل المقاسات"
+                  label="دليل المقاسات"
+                  zoomFactor={3}
+                  startIndex={0}
+                  onClose={() => setGuideOpen(false)}
+                />
               )}
             </div>
 

@@ -36,9 +36,20 @@ export default function PdpGallery({
   const fromScroll = useRef(false);
   // Open viewer: start photo, and the page wrapper it renders into (read in the click handler, not during render).
   const [viewer, setViewer] = useState<{ index: number; host: Element } | null>(null);
-  const openViewer = (index: number) =>
+  const openViewer = (index: number) => {
+    setShowRest(true);
     setViewer({ index, host: trackRef.current?.closest(".pdp-root") ?? document.body });
+  };
   const count = images.length;
+
+  // Photos 2+ start downloading only after the main photo has loaded (or the shopper swipes,
+  // taps a thumbnail or picks a colour), so they don't compete with it. Fallback: after 4 s.
+  const [showRest, setShowRest] = useState(false);
+  const restVisible = showRest || selectedImageIndex > 0;
+  useEffect(() => {
+    const t = setTimeout(() => setShowRest(true), 4000);
+    return () => clearTimeout(t);
+  }, []);
 
   // Keep the track and the active thumbnail in view when the index changes from outside
   // (thumbnails, color choice, closing the viewer).
@@ -62,6 +73,7 @@ export default function PdpGallery({
   const handleScroll = () => {
     const el = trackRef.current;
     if (!el) return;
+    setShowRest(true);
     const index = Math.min(indexFromScroll(el), count - 1);
     if (index !== selectedImageIndex) {
       fromScroll.current = true;
@@ -114,18 +126,21 @@ export default function PdpGallery({
               aria-label={`تكبير الصورة ${index + 1} من ${count}`}
               className="relative aspect-[3/4] w-full shrink-0 cursor-zoom-in snap-start snap-always"
             >
-              <Image
-                src={imageUrl(img)}
-                alt={`${title}، الصورة ${index + 1}`}
-                fill
-                quality={75}
-                priority={index === 0}
-                // The first photo is the page's main image: fetch it before fonts and other photos.
-                fetchPriority={index === 0 ? "high" : "low"}
-                sizes="(min-width: 768px) 55vw, 100vw"
-                className="object-contain select-none"
-                draggable={false}
-              />
+              {(index === 0 || restVisible) && (
+                <Image
+                  src={imageUrl(img)}
+                  alt={`${title}، الصورة ${index + 1}`}
+                  fill
+                  quality={75}
+                  priority={index === 0}
+                  // The first photo is the page's main image: fetch it before fonts and other photos.
+                  fetchPriority={index === 0 ? "high" : "low"}
+                  onLoad={index === 0 ? () => setShowRest(true) : undefined}
+                  sizes="(min-width: 768px) 55vw, 100vw"
+                  className="object-contain select-none"
+                  draggable={false}
+                />
+              )}
             </button>
           ))}
         </div>
@@ -188,22 +203,30 @@ export default function PdpGallery({
 
 // ─── Full-screen viewer ───────────────────────────────────────────────────────
 
-function ZoomViewer({
+export function ZoomViewer({
   images,
   imageUrl,
   title,
   startIndex,
   onClose,
+  label,
+  zoomFactor = 2,
 }: {
   images: string[];
   imageUrl: (src: string) => string;
   title: string;
   startIndex: number;
   onClose: (lastIndex: number) => void;
+  /** Shown in place of the 01 / 05 counter (for a single image such as the size guide). */
+  label?: string;
+  /** How much a tap enlarges the image (2× for photos; more for small text such as a size chart). */
+  zoomFactor?: number;
 }) {
   const count = images.length;
   const [index, setIndex] = useState(startIndex);
   const [zoomed, setZoomed] = useState(false);
+  // Images that have finished loading; until then a quiet "loading" line shows behind each.
+  const [loaded, setLoaded] = useState<Set<number>>(() => new Set());
   const trackRef = useRef<HTMLDivElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
   const zoomRef = useRef<HTMLButtonElement>(null);
@@ -315,9 +338,13 @@ function ZoomViewer({
             {zoomed ? <ZoomOut size={21} aria-hidden /> : <ZoomIn size={21} aria-hidden />}
           </button>
         </div>
-        <p dir="ltr" aria-live="polite" className="px-3 text-[13px] tracking-[0.08em] tabular-nums">
-          {pad(index + 1)} / {pad(count)}
-        </p>
+        {label ? (
+          <p className="px-3 text-[15px] font-medium">{label}</p>
+        ) : (
+          <p dir="ltr" aria-live="polite" className="px-3 text-[13px] tracking-[0.08em] tabular-nums">
+            {pad(index + 1)} / {pad(count)}
+          </p>
+        )}
       </div>
 
       <div
@@ -338,14 +365,21 @@ function ZoomViewer({
                 isZoomed ? "cursor-zoom-out overflow-auto overscroll-contain" : "cursor-zoom-in overflow-hidden px-4 py-3 md:px-10 md:py-6"
               }`}
             >
-              <div className={`relative ${isZoomed ? "h-[200%] w-[200%]" : "h-full w-full"}`}>
+              <div
+                className="relative"
+                style={{ width: `${isZoomed ? zoomFactor * 100 : 100}%`, height: `${isZoomed ? zoomFactor * 100 : 100}%` }}
+              >
+                {!loaded.has(i) && (
+                  <p className="absolute inset-0 flex items-center justify-center text-[14px] text-lt-muted">جاري التحميل…</p>
+                )}
                 <Image
                   src={imageUrl(img)}
                   alt={`${title}، الصورة ${i + 1}`}
                   fill
                   quality={75}
+                  onLoad={() => setLoaded((prev) => new Set(prev).add(i))}
                   loading={Math.abs(i - index) <= 1 ? "eager" : "lazy"}
-                  sizes={isZoomed ? "200vw" : "100vw"}
+                  sizes={isZoomed ? `${zoomFactor * 100}vw` : "100vw"}
                   className="object-contain select-none"
                   draggable={false}
                 />
