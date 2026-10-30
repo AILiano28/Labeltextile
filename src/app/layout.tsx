@@ -17,6 +17,9 @@ const poppins = Poppins({
   subsets: ["latin"],
   weight: ["300", "400", "500", "600", "700"],
   display: "swap",
+  // Not preloaded: font preloads competed with the main product photo on slow 4G (perf audit 28 Oct 2026).
+  // The font still loads from the CSS straight away and swaps in.
+  preload: false,
 });
 
 export const metadata: Metadata = {

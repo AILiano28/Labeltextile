@@ -4,6 +4,9 @@ import { Montserrat } from "next/font/google";
 const montserrat = Montserrat({
   subsets: ["latin"],
   weight: ["200", "300"],
+  // Not preloaded: font preloads competed with the main product photo on slow 4G (perf audit 28 Oct 2026).
+  // The font still loads from the CSS straight away and swaps in.
+  preload: false,
 });
 
 import React, { useState, useEffect } from "react";

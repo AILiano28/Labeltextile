@@ -7,6 +7,9 @@ export const plexArabic = IBM_Plex_Sans_Arabic({
   weight: ["400", "500", "600"],
   display: "swap",
   variable: "--font-pdp-sans",
+  // Not preloaded: font preloads competed with the main product photo on slow 4G (perf audit 28 Oct 2026).
+  // The font still loads from the CSS straight away and swaps in.
+  preload: false,
 });
 export const naskh = Noto_Naskh_Arabic({
   subsets: ["arabic"],

@@ -3,7 +3,12 @@
 import { useMemo, useState } from "react";
 import { Review } from "@/types/api";
 import { Star, X } from "lucide-react";
-import { AddReviewForm } from "./AddReviewForm";
+import dynamic from "next/dynamic";
+// The add-review form (and its form UI kit) is downloaded only when «أضيفي رأيك» is opened.
+const AddReviewForm = dynamic(() => import("./AddReviewForm").then((m) => m.AddReviewForm), {
+  ssr: false,
+  loading: () => <p className="py-8 text-center text-[14px] text-lt-muted">جاري التحميل…</p>,
+});
 import { api } from "@/lib/api";
 import { reviewCountLabel } from "./reviewCount";
 
