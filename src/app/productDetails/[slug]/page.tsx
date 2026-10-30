@@ -2,6 +2,7 @@ import PdpBestSellers from "@/components/productDetails/PdpBestSellers";
 import { ProductImageCard } from "@/components/productDetails/ProductImageCard";
 import { ProductReviews } from "@/components/productDetails/ProductReviews";
 import { api } from "@/lib/api";
+import type { Review } from "@/types/api";
 import Link from "next/link";
 import { ToastProvider } from "@/components/ToastProvider";
 import { naskh, plexArabic } from "@/components/productDetails/pdpFonts";
@@ -15,9 +16,13 @@ export default async function Page({
   const { slug } = await params;
   const productId = parseInt(slug) || 1;
 
-  // Parallel fetch on server
+  // Parallel fetch on server. Reviews are optional: if they fail the page renders without them.
+  // If the product itself fails, error.tsx shows a retry message.
   const [reviews, product] = await Promise.all([
-    api.filterReviews({ approved: true, productId }),
+    api.filterReviews({ approved: true, productId }).catch((error): Review[] => {
+      console.warn("Reviews unavailable:", error);
+      return [];
+    }),
     api.getProductById(productId),
   ]);
 

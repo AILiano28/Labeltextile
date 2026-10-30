@@ -22,6 +22,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 
 import { api, getImageUrl } from "@/lib/api";
+import { withRetry } from "@/lib/retry";
 import { Product, Review } from "@/types/api";
 
 import placeholderImage from "../../../public/assets/placeholder-image.svg";
@@ -44,6 +45,29 @@ const formatDZD = (amount: number) =>
 const isValidPrice = (p: number | null | undefined): p is number =>
   typeof p === "number" && Number.isFinite(p) && p >= 0;
 const formatShipping = (p: number) => (p === 0 ? "مجاني" : formatDZD(p));
+
+// ─── Wilayas and delivery prices (getCountries) ───────────────────────────────
+// Keeps backend values as they are: a price that is not a finite number becomes null
+// (that delivery method is then disabled); it is never replaced by 0.
+const toPrice = (p: unknown): number | null => (typeof p === "number" && Number.isFinite(p) ? p : null);
+
+function parseCountries(json: unknown): Country[] {
+  const data = (json as { data?: unknown } | null)?.data;
+  if (!Array.isArray(data)) throw new Error("Unexpected getCountries response");
+  const countries = data
+    .filter((c): c is Country => !!c && typeof c.id === "number" && typeof c.nameAr === "string")
+    .map((c) => ({ ...c, price1: toPrice(c.price1), price2: toPrice(c.price2) }));
+  if (countries.length === 0) throw new Error("getCountries returned no wilayas");
+  return countries;
+}
+
+// 10 s per attempt, retried after 1 s and 3 s.
+const loadCountries = () =>
+  withRetry(async () => {
+    const res = await fetch("https://back.testwebapp.space/getCountries", { signal: AbortSignal.timeout(10_000) });
+    if (!res.ok) throw new Error(`getCountries HTTP ${res.status}`);
+    return parseCountries(await res.json());
+  });
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface Commune {
@@ -112,7 +136,8 @@ const formSchema = z
       .refine((v) => !v.trim() || DZ_PHONE.test(normalizePhone(v)), "رقم الهاتف غير صحيح. مثال: 0555 12 34 56"),
     size: z.string().min(1, "المقاس مطلوب"),
     color: z.string().optional(),
-    country: z.string().min(1, "اختاري الولاية"),
+    // A disabled select (wilayas still loading or unavailable) reports undefined, hence `error`.
+    country: z.string({ error: "اختاري الولاية" }).min(1, "اختاري الولاية"),
     commune: z.string().optional(),
     shippingType: z.enum(["domicile", "bureau"]).optional(),
     // Set by the form, never sent: does the chosen wilaya list communes, and does the chosen
@@ -405,10 +430,11 @@ export function ProductImageCard({ product }: { product: Product }) {
   useEffect(() => {
     const fetchReviews = async () => {
       try {
-        const reviewsData = await api.filterReviews({
-          approved: true,
-          productId: product.id,
-        });
+        // Optional: one retry, then the rating stays hidden.
+        const reviewsData = await withRetry(
+          () => api.filterReviews({ approved: true, productId: product.id }),
+          [1500]
+        );
 
         setReviews(reviewsData);
 
@@ -422,7 +448,7 @@ export function ProductImageCard({ product }: { product: Product }) {
           setAverageRating(avg.toFixed(1));
         }
       } catch (error) {
-        console.error("Failed to fetch reviews:", error);
+        console.warn("Reviews unavailable:", error);
       }
     };
 
@@ -431,12 +457,37 @@ export function ProductImageCard({ product }: { product: Product }) {
     }
   }, [product?.id]);
 
+  // Delivery data is required to order: on failure the form shows a retry instead of any price.
+  const [countriesStatus, setCountriesStatus] = useState<"loading" | "ready" | "error">("loading");
   useEffect(() => {
-    fetch("https://back.testwebapp.space/getCountries")
-      .then((r) => r.json())
-      .then((json) => setCountries(json.data ?? []))
-      .catch(console.error);
+    let active = true;
+    loadCountries()
+      .then((list) => {
+        if (!active) return;
+        setCountries(list);
+        setCountriesStatus("ready");
+      })
+      .catch((error) => {
+        console.warn("Wilayas unavailable:", error);
+        if (active) setCountriesStatus("error");
+      });
+    return () => {
+      active = false;
+    };
   }, []);
+
+  const retryCountries = () => {
+    setCountriesStatus("loading");
+    loadCountries()
+      .then((list) => {
+        setCountries(list);
+        setCountriesStatus("ready");
+      })
+      .catch((error) => {
+        console.warn("Wilayas unavailable:", error);
+        setCountriesStatus("error");
+      });
+  };
 
   const images: string[] = useMemo(() => {
     try {
@@ -978,19 +1029,49 @@ export function ProductImageCard({ product }: { product: Product }) {
                     <select
                       id="pdp-wilaya"
                       {...register("country", { onChange: onCountryChange })}
-                      aria-invalid={!!errors.country}
-                      aria-describedby={errors.country ? "err-country" : undefined}
+                      disabled={countriesStatus !== "ready"}
+                      aria-invalid={!!errors.country || countriesStatus === "error"}
+                      aria-describedby={
+                        countriesStatus === "error" ? "err-countries-load" : errors.country ? "err-country" : undefined
+                      }
+                      aria-busy={countriesStatus === "loading"}
                       className={selectCls}
                       dir="rtl"
                     >
-                      <option value="" disabled>اختاري الولاية</option>
+                      <option value="" disabled>
+                        {countriesStatus === "loading"
+                          ? "جاري تحميل الولايات…"
+                          : countriesStatus === "error"
+                            ? "الولايات غير متوفرة حاليًا"
+                            : "اختاري الولاية"}
+                      </option>
                       {countries.map((c) => (
                         <option key={c.id} value={String(c.id)}>{c.nameAr}</option>
                       ))}
                     </select>
                     <ChevronDown size={18} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-lt-muted" aria-hidden />
                   </div>
-                  <FieldError id="err-country" message={errors.country?.message} />
+                  {countriesStatus === "error" ? (
+                    <div
+                      id="err-countries-load"
+                      role="alert"
+                      className="mt-2 flex items-center justify-between gap-3 rounded-[4px] border border-lt-error/30 bg-lt-blush/60 py-1.5 ps-3 pe-1.5"
+                    >
+                      <p className="flex items-center gap-1.5 text-[13.5px] leading-[1.5] text-lt-error">
+                        <AlertCircle size={15} className="shrink-0" aria-hidden />
+                        تعذّر تحميل الولايات وأسعار التوصيل.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={retryCountries}
+                        className="min-h-11 shrink-0 rounded-[4px] border border-lt-espresso bg-white px-3 text-[14px] font-medium text-lt-espresso"
+                      >
+                        إعادة المحاولة
+                      </button>
+                    </div>
+                  ) : (
+                    <FieldError id="err-country" message={errors.country?.message} />
+                  )}
                 </div>
 
                 <div>

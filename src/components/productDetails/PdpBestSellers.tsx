@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { api, getImageUrl } from "@/lib/api";
+import { withRetry } from "@/lib/retry";
 import { Product } from "@/types/api";
 
 const formatDZD = (amount: number) =>
@@ -28,10 +29,10 @@ export default function PdpBestSellers({ excludeId, limit = 6 }: { excludeId?: n
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api
-      .filterProducts()
+    // Optional section: one retry, then it stays hidden.
+    withRetry(() => api.filterProducts(), [1500])
       .then((data) => setProducts(data.filter((p) => p.id !== excludeId).slice(0, limit)))
-      .catch((error) => console.error("Error fetching best sellers:", error))
+      .catch((error) => console.warn("Best sellers unavailable:", error))
       .finally(() => setLoading(false));
   }, [excludeId, limit]);
 
