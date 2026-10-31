@@ -18,3 +18,13 @@
 .pdp-root:has(#order-form :focus) .pdp-sticky-cta {
   visibility: hidden;
 }
+
+/* Short screens (wider than 1:2, e.g. 360×640 or an in-app browser): the gallery and thumbnails do
+   not fit above the bar, so it starts hidden until JavaScript knows they are clear (data-ready).
+   Taller phones keep the bar from first paint, including before JavaScript has loaded. */
+@media (max-width: 1023px) and (min-aspect-ratio: 1/2) {
+  .pdp-sticky-cta:not([data-ready]) {
+    visibility: hidden;
+    translate: 0 100%;
+  }
+}

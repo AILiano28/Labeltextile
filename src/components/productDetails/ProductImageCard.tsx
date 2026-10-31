@@ -868,6 +868,39 @@ export function ProductImageCard({ product }: { product: Product }) {
     return () => observer.disconnect();
   }, []);
 
+  // The bar also waits until the thumbnails are clear of it, so on short screens (in-app browsers)
+  // it never covers them. On taller phones they are clear from the start and nothing changes.
+  // Before hydration, pdp.css keeps it hidden on short screens only (see data-ready).
+  const barRef = useRef<HTMLDivElement>(null);
+  const galleryEndRef = useRef<HTMLDivElement>(null);
+  const [galleryClear, setGalleryClear] = useState(true);
+  const [barReady, setBarReady] = useState(false);
+  useEffect(() => {
+    const end = galleryEndRef.current;
+    if (!end) return;
+    // A position check (once per frame) rather than an IntersectionObserver: a jump straight back
+    // to the top (e.g. tapping the iPhone status bar) never "intersects" on the way and would be missed.
+    let frame = 0;
+    const update = () => {
+      frame = 0;
+      const barHeight = barRef.current?.offsetHeight || 80;
+      setGalleryClear(end.getBoundingClientRect().top <= window.innerHeight - barHeight);
+      setBarReady(true);
+    };
+    const schedule = () => {
+      if (!frame) frame = requestAnimationFrame(update);
+    };
+    schedule();
+    window.addEventListener("scroll", schedule, { passive: true });
+    window.addEventListener("resize", schedule);
+    return () => {
+      cancelAnimationFrame(frame);
+      window.removeEventListener("scroll", schedule);
+      window.removeEventListener("resize", schedule);
+    };
+  }, []);
+  const barHidden = formVisible || !galleryClear;
+
   const [guideOpen, setGuideOpen] = useState(false);
 
   return (
@@ -875,9 +908,10 @@ export function ProductImageCard({ product }: { product: Product }) {
       {showThankYou && <ThankYouModal onClose={() => setShowThankYou(false)} />}
 
       <div className={`w-full bg-lt-ivory text-lt-espresso`}>
-        <div className="md:grid md:grid-cols-[minmax(0,1fr)_420px] md:items-start md:gap-10 lg:grid-cols-[minmax(0,1fr)_460px] lg:gap-16">
+        {/* Tablets (768–1023px) use the phone layout in a centred column; two columns from 1024px. */}
+        <div className="md:mx-auto md:max-w-[560px] lg:grid lg:max-w-none lg:grid-cols-[minmax(0,1fr)_460px] lg:items-start lg:gap-16">
           {/* ── GALLERY ─────────────────────────────────────────────────── */}
-          <div className="md:sticky md:top-28">
+          <div className="lg:sticky lg:top-28">
             <PdpGallery
               images={galleryImages}
               imageUrl={imageUrl}
@@ -885,10 +919,11 @@ export function ProductImageCard({ product }: { product: Product }) {
               selectedImageIndex={selectedImageIndex}
               setSelectedImageIndex={setSelectedImageIndex}
             />
+            <div ref={galleryEndRef} aria-hidden="true" />
           </div>
 
           {/* ── DETAILS ─────────────────────────────────────────────────── */}
-          <div className="px-4 pt-5 text-right md:px-0 md:pt-0">
+          <div className="px-4 pt-5 text-right md:px-0 lg:pt-0">
             <h1 className="pdp-display text-[23px] font-semibold leading-[1.4] text-lt-espresso text-balance md:text-[2rem]">
               {product.title}
             </h1>
@@ -976,7 +1011,7 @@ export function ProductImageCard({ product }: { product: Product }) {
                 aria-labelledby="pdp-size-label"
                 aria-invalid={!!errors.size}
                 aria-describedby={errors.size ? "err-size" : undefined}
-                className="grid grid-cols-6 gap-2"
+                className="grid grid-cols-6 gap-1 min-[360px]:gap-2"
               >
                 {sizes.map((size: string) => {
                   const selected = selectedSize === size;
@@ -1273,12 +1308,14 @@ export function ProductImageCard({ product }: { product: Product }) {
 
         {/* ── STICKY BAR (mobile, single) ──────────────────────────────── */}
         <div
-          inert={formVisible}
-          className={`pdp-sticky-cta fixed inset-x-0 bottom-0 z-[100] border-t border-lt-line bg-lt-ivory px-4 pt-2.5 pb-[max(0.625rem,env(safe-area-inset-bottom))] transition-transform duration-300 md:hidden ${
-            formVisible ? "translate-y-full" : "translate-y-0"
+          ref={barRef}
+          inert={barHidden}
+          data-ready={barReady ? "" : undefined}
+          className={`pdp-sticky-cta fixed inset-x-0 bottom-0 z-[100] border-t border-lt-line bg-lt-ivory px-4 pt-2.5 pb-[max(0.625rem,env(safe-area-inset-bottom))] transition-transform duration-300 lg:hidden ${
+            barHidden ? "translate-y-full" : "translate-y-0"
           }`}
         >
-          <div className="flex items-center gap-2.5">
+          <div className="mx-auto flex max-w-[560px] items-center gap-2.5">
             <div className="min-w-0 max-w-[45%] text-[13px] leading-tight text-lt-muted">
               <p className="truncate">{product.title}</p>
               <p className="mt-0.5 text-[17px] font-semibold tabular-nums text-lt-espresso">{formatDZD(unitPrice)}</p>
