@@ -8,7 +8,7 @@ import { preload } from "react-dom";
 // - Phones (< 768 px): the banner's text would be ~7–8 px, so phones get a square crop of the same image
 //   (the model and the floral kimono) with the same headline, subtitle and button as real, readable text
 //   underneath, in the banner's own colours.
-// Pre-generated AVIF (q60, 4:4:4) and WebP (q82) files in /public/assets/home, served as-is (no runtime
+// Pre-generated AVIF (q60, 4:4:4; phone crop q52) and WebP (q82) files in /public/assets/home, served as-is (no runtime
 // image optimization). The whole hero is one link to the collections.
 const DESKTOP = [640, 828, 1080, 1280, 1774];
 const MOBILE = [480, 640, 828, 887];
