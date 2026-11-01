@@ -1,0 +1,43 @@
+/* Product page: Arabic faces scoped to .pdp-root.
+   globals.css sets `* { font-family: poppins !important }`, so these rules must be !important too.
+
+   The web fonts are switched on by `data-pdp-fonts` on <html>, set right after hydration (PdpFontsGate),
+   so their ~290 KB don't compete with the JavaScript on slow connections. Until then the page uses the
+   size-adjusted fallback the browser already shows while the fonts download (display: swap).
+   Safety nets: a 5 s timer in page.tsx, and a <noscript> style when JavaScript is off. */
+.pdp-root,
+.pdp-root * {
+  font-family: "IBM Plex Sans Arabic Fallback", sans-serif !important;
+}
+.pdp-root .pdp-display {
+  font-family: "IBM Plex Sans Arabic Fallback", serif !important;
+}
+html[data-pdp-fonts] .pdp-root,
+html[data-pdp-fonts] .pdp-root * {
+  font-family: var(--font-pdp-sans), sans-serif !important;
+}
+html[data-pdp-fonts] .pdp-root .pdp-display {
+  font-family: var(--font-pdp-display), var(--font-pdp-sans), serif !important;
+}
+/* The LABELTEXTILE wordmark in the order success modal keeps its Montserrat face
+   (`html` raises the specificity above the gated rules). */
+html .pdp-root .pdp-logo,
+html .pdp-root .pdp-logo * {
+  font-family: var(--font-lt-logo), sans-serif !important;
+}
+
+/* Sticky order bar: hidden while a checkout field has focus, so it never sits on top of the field
+   or the on-screen keyboard. Pure CSS, so it also works before JavaScript has loaded. */
+.pdp-root:has(#order-form :focus) .pdp-sticky-cta {
+  visibility: hidden;
+}
+
+/* Short screens (wider than 1:2, e.g. 360×640 or an in-app browser): the gallery and thumbnails do
+   not fit above the bar, so it starts hidden until JavaScript knows they are clear (data-ready).
+   Taller phones keep the bar from first paint, including before JavaScript has loaded. */
+@media (max-width: 1023px) and (min-aspect-ratio: 1/2) {
+  .pdp-sticky-cta:not([data-ready]) {
+    visibility: hidden;
+    translate: 0 100%;
+  }
+}

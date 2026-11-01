@@ -1,22 +1,35 @@
-import BestSellers from "@/components/home/components/BestSellers";
+import PdpBestSellers from "@/components/productDetails/PdpBestSellers";
 import { ProductImageCard } from "@/components/productDetails/ProductImageCard";
 import { ProductReviews } from "@/components/productDetails/ProductReviews";
 import { api } from "@/lib/api";
+import type { Review } from "@/types/api";
 import Link from "next/link";
+import { preload } from "react-dom";
 import { ToastProvider } from "@/components/ToastProvider";
-import { MobileOrderButton } from "@/components/productDetails/MobileOrderButton";
+import { naskh, plexArabic } from "@/components/productDetails/pdpFonts";
+import "@/components/productDetails/pdp.css";
+import PdpFontsGate, { PDP_FONTS_NOSCRIPT, PDP_FONTS_TIMER } from "@/components/productDetails/PdpFontsGate";
 
 export default async function Page({
   params,
 }: {
   params: Promise<{ slug: string }>;
 }) {
+  // Start downloading wilayas and delivery prices with the HTML, in parallel with the JavaScript.
+  // Same URL, mode and credentials as the browser fetch in ProductImageCard, so that fetch reuses it.
+  // Low priority so the main product photo still downloads first.
+  preload("https://back.testwebapp.space/getCountries", { as: "fetch", crossOrigin: "anonymous", fetchPriority: "low" });
+
   const { slug } = await params;
   const productId = parseInt(slug) || 1;
 
-  // Parallel fetch on server
+  // Parallel fetch on server. Reviews are optional: if they fail the page renders without them.
+  // If the product itself fails, error.tsx shows a retry message.
   const [reviews, product] = await Promise.all([
-    api.filterReviews({ approved: true, productId }),
+    api.filterReviews({ approved: true, productId }).catch((error): Review[] => {
+      console.warn("Reviews unavailable:", error);
+      return [];
+    }),
     api.getProductById(productId),
   ]);
 
@@ -28,28 +41,36 @@ export default async function Page({
     );
 
   return (
-    <div className="container mx-auto space-y-16 mt-20 md:mt-44 relative px-6">
+    <div className={`pdp-root ${plexArabic.variable} ${naskh.variable} bg-lt-ivory text-lt-espresso`}>
       <ToastProvider />
-      <ProductImageCard product={product} />
+      <PdpFontsGate />
+      <script dangerouslySetInnerHTML={{ __html: PDP_FONTS_TIMER }} />
+      <noscript>
+        <style>{PDP_FONTS_NOSCRIPT}</style>
+      </noscript>
 
-      <ProductReviews initialReviews={reviews} productId={productId} />
+      {/* Full-bleed gallery on mobile; the single sticky order bar lives inside ProductImageCard. */}
+      <div className="mx-auto max-w-7xl pt-[70px] md:px-8 md:pt-44 lg:px-12">
+        <ProductImageCard product={product} />
+      </div>
 
-      <BestSellers limit={3} excludeId={productId} />
+      <div className="mx-auto mt-12 max-w-7xl border-t border-lt-line px-4 pt-10 md:px-8 lg:px-12">
+        <ProductReviews initialReviews={reviews} productId={productId} />
+      </div>
+
+      <div className="mx-auto mt-14 max-w-7xl border-t border-lt-line pt-12 md:px-8 lg:px-12">
+        <PdpBestSellers excludeId={productId} />
+      </div>
 
       {/* Explore More Section */}
-      <section className="flex flex-col items-center mt-4 mb-24">
+      <section className="flex flex-col items-center px-4 pt-12 pb-28 md:pb-20">
         <Link
           href="/cataProducts"
-          className="bg-[#B3A495] text-white px-12 py-4 rounded-[4px] text-[16px] font-medium hover:bg-[#a39485] transition-all transform hover:scale-105 active:scale-95 shadow-lg shadow-[#B3A495]/20"
+          className="inline-flex h-[52px] w-full max-w-sm items-center justify-center border border-lt-espresso text-[16px] font-medium text-lt-espresso transition-colors hover:bg-lt-espresso hover:text-lt-ivory"
         >
           اكتشف مجموعتنا
         </Link>
       </section>
-
-      {/* Fixed Mobile Order Button (Client logic inside the component) */}
-      <MobileOrderButton />
     </div>
   );
 }
-
-// Small client component for the mobile button to keep the page server-side

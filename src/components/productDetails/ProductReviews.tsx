@@ -1,125 +1,139 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Review } from "@/types/api";
 import { Star, X } from "lucide-react";
-import { Swiper, SwiperSlide } from "swiper/react";
-import { Autoplay } from "swiper/modules";
-import { AddReviewForm } from "./AddReviewForm";
+import dynamic from "next/dynamic";
+// The add-review form (and its form UI kit) is downloaded only when «أضيفي رأيك» is opened.
+const AddReviewForm = dynamic(() => import("./AddReviewForm").then((m) => m.AddReviewForm), {
+  ssr: false,
+  loading: () => <p className="py-8 text-center text-[14px] text-lt-muted">جاري التحميل…</p>,
+});
 import { api } from "@/lib/api";
-
-// Swiper styles
-import "swiper/css";
+import { reviewCountLabel } from "./reviewCount";
 
 interface ProductReviewsProps {
   initialReviews: Review[];
   productId: number;
 }
 
-export function ProductReviews({
-  initialReviews,
-  productId,
-}: ProductReviewsProps) {
+const FIRST_VISIBLE = 3;
+
+// Some reviews were saved with a phone number as the name: never show it publicly.
+const displayName = (name: string) => ((name.match(/\d/g) ?? []).length >= 6 ? "عميلة" : name);
+
+function Stars({ value, size = 15 }: { value: number; size?: number }) {
+  return (
+    <span className="inline-flex gap-0.5" aria-label={`${value} من 5`} role="img">
+      {[0, 1, 2, 3, 4].map((i) => (
+        <Star
+          key={i}
+          size={size}
+          aria-hidden
+          fill={i < Math.round(value) ? "#A78D77" : "transparent"}
+          className={i < Math.round(value) ? "text-lt-taupe" : "text-lt-line"}
+        />
+      ))}
+    </span>
+  );
+}
+
+/**
+ * Approved reviews from the backend, each shown once, newest first. With none: a short
+ * invitation and the existing add-review form (same API; new reviews appear once approved).
+ */
+export function ProductReviews({ initialReviews, productId }: ProductReviewsProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [reviews, setReviews] = useState<Review[]>(initialReviews);
+  const [showAll, setShowAll] = useState(false);
 
-  // Duplicate reviews to ensure the slider always has enough items to loop
-  const displayReviews =
-    reviews.length > 0
-      ? reviews.length < 6
-        ? [...reviews, ...reviews, ...reviews]
-        : reviews
-      : [];
+  const sorted = useMemo(
+    () => [...reviews].sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt))),
+    [reviews]
+  );
+  const count = sorted.length;
+  const average = count ? sorted.reduce((s, r) => s + Number(r.rating || 0), 0) / count : 0;
+  const visible = showAll ? sorted : sorted.slice(0, FIRST_VISIBLE);
 
   const handleRefresh = async () => {
     try {
       const data = await api.filterReviews({ approved: true, productId });
       setReviews(data);
     } catch (error) {
-      console.error("Failed to refresh reviews:", error);
+      console.warn("Reviews unavailable:", error);
     }
   };
 
   return (
-    <div className="mt-20 rtl px-4 md:px-0 relative">
-      <h2 className="text-[32px] font-bold mb-10 text-right">التعليقات</h2>
-
-      {/* Reviews Slider */}
-      <div className="mb-12">
-        <Swiper
-          modules={[Autoplay]}
-          spaceBetween={24}
-          slidesPerView={1}
-          loop={displayReviews.length > 1}
-          autoplay={{
-            delay: 3000,
-            disableOnInteraction: false,
-            reverseDirection: true,
-          }}
-          breakpoints={{
-            768: {
-              slidesPerView: 2,
-            },
-            1024: {
-              slidesPerView: 3,
-            },
-          }}
-          className="reviews-swiper"
-        >
-          {displayReviews.map((r, i) => (
-            <SwiperSlide key={i}>
-              <div className="h-full p-8 border border-black/5 rounded-[8px] flex flex-col items-start text-right transition-all duration-300">
-                <div className="flex gap-1 mb-4">
-                  {[...Array(5)].map((_, index) => (
-                    <Star
-                      key={index}
-                      size={16}
-                      fill={index < r.rating ? "#FFD700" : "transparent"}
-                      className={
-                        index < r.rating ? "text-[#FFD700]" : "text-gray-200"
-                      }
-                    />
-                  ))}
-                </div>
-
-                <p className="text-[15px] leading-relaxed text-black/60 mb-6 italic">
-                  &quot;{r.comment || "لا يوجد تعليق"}&quot;
-                </p>
-
-                <div className="mt-auto pt-4 w-full">
-                  <p className="text-[16px] font-bold text-black">{r.name}</p>
-                </div>
-              </div>
-            </SwiperSlide>
-          ))}
-        </Swiper>
-      </div>
-
-      {/* Add Review Button */}
-      <div className="flex justify-center mb-20">
+    <section id="reviews" aria-labelledby="reviews-title" className="scroll-mt-24 text-right text-lt-espresso">
+      <div className="flex items-start justify-between gap-4">
+        <div className="min-w-0">
+          <h2 id="reviews-title" className="pdp-display text-[22px] font-semibold leading-[1.4]">
+            آراء العميلات
+          </h2>
+          {count > 0 && (
+            <p className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[14px] text-lt-desc">
+              <Stars value={average} />
+              <span className="font-semibold tabular-nums text-lt-espresso">{average.toFixed(1)}</span>
+              <span>· {reviewCountLabel(count)}</span>
+            </p>
+          )}
+        </div>
         <button
+          type="button"
           onClick={() => setIsModalOpen(true)}
-          className="bg-[#B3A495] text-white px-12 py-4 rounded-[4px] text-[16px] font-medium hover:bg-[#a39485] transition-all transform hover:scale-105 active:scale-95 shadow-lg shadow-[#B3A495]/20"
+          className="inline-flex min-h-11 shrink-0 items-center rounded-[4px] border border-lt-espresso px-4 text-[14px] font-medium text-lt-espresso transition-colors hover:bg-lt-espresso hover:text-lt-ivory"
         >
-          إضافة مراجعة
+          أضيفي رأيك
         </button>
       </div>
 
-      {/* Review Modal */}
+      {count === 0 ? (
+        <p className="mt-4 text-[15px] leading-[1.75] text-lt-desc">لا توجد مراجعات بعد. كوني أول من تقيّم هذا المنتج.</p>
+      ) : (
+        <>
+          <ul className="mt-5 divide-y divide-lt-line border-y border-lt-line">
+            {visible.map((r) => (
+              <li key={r.id} className="py-4">
+                <Stars value={Number(r.rating || 0)} size={14} />
+                {r.comment && (
+                  <p dir="auto" className="mt-2 text-right text-[15px] leading-[1.75] text-lt-espresso">
+                    {r.comment}
+                  </p>
+                )}
+                <p dir="auto" className="mt-1.5 text-right text-[13.5px] font-medium text-lt-desc">
+                  {displayName(String(r.name ?? ""))}
+                </p>
+              </li>
+            ))}
+          </ul>
+          {count > FIRST_VISIBLE && (
+            <button
+              type="button"
+              onClick={() => setShowAll((v) => !v)}
+              aria-expanded={showAll}
+              className="mt-2 inline-flex min-h-11 items-center text-[14px] text-lt-espresso underline decoration-lt-taupe underline-offset-[6px]"
+            >
+              {showAll ? "عرض أقل" : `عرض كل المراجعات (${count})`}
+            </button>
+          )}
+        </>
+      )}
+
+      {/* Add-review form (unchanged behaviour and API). */}
       {isModalOpen && (
         <>
-          {/* Backdrop */}
           <div
             onClick={() => setIsModalOpen(false)}
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] animate-in fade-in duration-200"
+            className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm animate-in fade-in duration-200"
           />
-
-          {/* Modal Content */}
-          <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[95%] max-w-[500px] bg-white rounded-[12px] shadow-2xl z-[101] overflow-hidden animate-in fade-in zoom-in-95 slide-in-from-bottom-4 duration-200">
-            <div className="p-6 md:p-8 relative">
+          <div className="fixed top-1/2 left-1/2 z-[101] w-[95%] max-w-[500px] -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-[12px] bg-white shadow-2xl animate-in fade-in zoom-in-95 slide-in-from-bottom-4 duration-200">
+            <div className="relative p-6 md:p-8">
               <button
+                type="button"
                 onClick={() => setIsModalOpen(false)}
-                className="absolute top-4 left-4 p-2 hover:bg-black/5 rounded-full transition-colors text-black/40 hover:text-black"
+                aria-label="إغلاق"
+                className="absolute top-3 left-3 flex size-11 items-center justify-center rounded-full text-black/40 transition-colors hover:bg-black/5 hover:text-black"
               >
                 <X size={20} />
               </button>
@@ -135,6 +149,6 @@ export function ProductReviews({
           </div>
         </>
       )}
-    </div>
+    </section>
   );
 }
