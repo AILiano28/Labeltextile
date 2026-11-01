@@ -38,6 +38,9 @@ export default function ProductCard({ product }: { product: Product }) {
           productTitle={product.title}
           productId={product.id}
           placeholderSrc={placeholderImage.src}
+          // Only used in the home page product grid, which is below the hero: load photos lazily so
+          // they don't compete with the CSS and the hero image.
+          priority={false}
         />
       </div>
 

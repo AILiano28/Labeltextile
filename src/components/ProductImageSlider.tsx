@@ -13,6 +13,8 @@ interface ProductImageSliderProps {
   productTitle: string;
   productId: number;
   placeholderSrc: string;
+  /** Load the first photo eagerly with a preload (default). Pass false when the card is below the first screen. */
+  priority?: boolean;
 }
 
 export default function ProductImageSlider({
@@ -20,6 +22,7 @@ export default function ProductImageSlider({
   productTitle,
   productId,
   placeholderSrc,
+  priority = true,
 }: ProductImageSliderProps) {
   const prevRef = useRef<HTMLButtonElement | null>(null);
   const nextRef = useRef<HTMLButtonElement | null>(null);
@@ -57,8 +60,8 @@ export default function ProductImageSlider({
                 src={img === placeholderSrc ? placeholderSrc : getImageUrl(img)}
                 alt={productTitle}
                 fill
-                priority={index === 0}
-                loading={index === 0 ? "eager" : "lazy"}
+                priority={priority && index === 0}
+                loading={priority && index === 0 ? "eager" : "lazy"}
                 quality={75}
                 sizes="(max-width: 768px) 50vw, 25vw"
                 className="object-cover object-top transition-all duration-500"
