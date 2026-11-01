@@ -6,7 +6,6 @@ import {
   Plus,
   Star,
   ChevronDown,
-  Truck,
   X,
   Check,
   Phone,
@@ -14,6 +13,7 @@ import {
   PackageOpen,
   Ruler,
   AlertCircle,
+  RefreshCw,
 } from "lucide-react";
 
 import { FB_EVENTS, trackFacebookEvent } from "@/lib/facebook";
@@ -40,8 +40,9 @@ const montserrat = Montserrat({
   preload: false,
 });
 
-const formatDZD = (amount: number) =>
-  `${Math.round(amount).toString().replace(/\B(?=(\d{3})+(?!\d))/g, "\u00a0")}\u00a0د.ج`;
+const formatAmount = (amount: number) =>
+  Math.round(amount).toString().replace(/\B(?=(\d{3})+(?!\d))/g, "\u00a0");
+const formatDZD = (amount: number) => `${formatAmount(amount)}\u00a0د.ج`;
 
 // A backend delivery price is usable when it is a finite number ≥ 0; 0 means free delivery.
 const isValidPrice = (p: number | null | undefined): p is number =>
@@ -130,8 +131,8 @@ const formSchema = z
   .object({
     fullName: z
       .string()
-      .refine((v) => v.trim().length > 0, "اكتبي الاسم واللقب")
-      .refine((v) => !v.trim() || nameWords(v).length >= 2, "اكتبي الاسم واللقب معًا، مثال: أمينة بن علي"),
+      // A first name alone is enough for a COD order; the surname is optional.
+      .refine((v) => v.trim().length > 0, "اكتبي اسمك"),
     phone: z
       .string()
       .refine((v) => v.trim().length > 0, "رقم الهاتف مطلوب")
@@ -486,6 +487,13 @@ export function ProductImageCard({ product }: { product: Product }) {
 
   // Delivery data is required to order: on failure the form shows a retry instead of any price.
   const [countriesStatus, setCountriesStatus] = useState<"loading" | "ready" | "error">("loading");
+
+  // Home-delivery price range across all wilayas, from the same backend list as the checkout.
+  // Free (0) prices are left out so the range never understates a paid fee.
+  const homeRange = useMemo(() => {
+    const prices = countries.map((c) => c.price1).filter((p): p is number => isValidPrice(p) && p > 0);
+    return prices.length ? { min: Math.min(...prices), max: Math.max(...prices) } : null;
+  }, [countries]);
   useEffect(() => {
     let active = true;
     loadCountries()
@@ -761,7 +769,7 @@ export function ProductImageCard({ product }: { product: Product }) {
           title: "سياسة التوصيل",
           content: (
             <p className="text-[16px] leading-[1.8] text-black/60">
-              يتم التوصيل خلال 3-5 أيام عمل إلى جميع الولايات.
+              مدة التوصيل من 1 إلى 3 أيام عمل حسب الولاية، إلى جميع الولايات.
             </p>
           ),
         },
@@ -967,13 +975,18 @@ export function ProductImageCard({ product }: { product: Product }) {
               )}
             </div>
 
-            <p className="mt-2.5 text-[13.5px] leading-[1.6] text-lt-desc">سعر التوصيل يظهر حسب ولايتك قبل تأكيد الطلب.</p>
+            {/* Two lines reserved, so the note doesn't push the page down when the wilaya list arrives. */}
+            <p className="mt-2.5 min-h-[3.2em] text-[13.5px] leading-[1.6] text-lt-desc">
+              {homeRange
+                ? `التوصيل للمنزل من ${formatAmount(homeRange.min)} إلى ${formatDZD(homeRange.max)} حسب الولاية، والسعر الدقيق يظهر عند اختيار ولايتك.`
+                : "سعر التوصيل يظهر حسب ولايتك قبل تأكيد الطلب."}
+            </p>
 
-            <ul className="mt-4 space-y-3 border-y border-lt-line py-4">
+            <ul className="mt-2 space-y-3 border-y border-lt-line py-4">
               {[
                 { Icon: Banknote, label: "الدفع عند الاستلام" },
                 { Icon: PackageOpen, label: "افتحي الطرد قبل الدفع" },
-                { Icon: Truck, label: "التوصيل إلى كل الولايات" },
+                { Icon: RefreshCw, label: "استبدال المقاس خلال 24 ساعة من الاستلام" },
               ].map(({ Icon, label }) => (
                 <li key={label} className="flex items-center gap-3 text-right">
                   <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-lt-beige">
@@ -994,17 +1007,6 @@ export function ProductImageCard({ product }: { product: Product }) {
                 <p id="pdp-size-label" className="text-[15px] font-semibold">
                   المقاس: <span className="ms-0.5 font-normal text-lt-muted">{selectedSize || "اختاري مقاسك"}</span>
                 </p>
-                {product.tableImage && (
-                  <button
-                    type="button"
-                    onClick={() => setGuideOpen(true)}
-                    aria-haspopup="dialog"
-                    className="inline-flex min-h-11 items-center gap-1.5 text-[14px] text-lt-espresso underline decoration-lt-taupe underline-offset-[6px]"
-                  >
-                    <Ruler size={16} aria-hidden />
-                    دليل المقاسات
-                  </button>
-                )}
               </div>
               <div
                 role="radiogroup"
@@ -1036,6 +1038,20 @@ export function ProductImageCard({ product }: { product: Product }) {
                 })}
               </div>
               <FieldError id="err-size" message={errors.size?.message} />
+              {product.tableImage && (
+                <p className="mt-1 flex min-h-11 items-center gap-1.5 text-[14px] text-lt-desc">
+                  <Ruler size={16} strokeWidth={1.6} className="text-lt-taupe" aria-hidden />
+                  محتارة في المقاس؟
+                  <button
+                    type="button"
+                    onClick={() => setGuideOpen(true)}
+                    aria-haspopup="dialog"
+                    className="inline-flex min-h-11 items-center text-lt-espresso underline decoration-lt-taupe underline-offset-[6px]"
+                  >
+                    دليل المقاسات
+                  </button>
+                </p>
+              )}
               {/* Size guide: full screen with tap-to-zoom (3×), so the chart is readable on a phone. */}
               {guideOpen && product.tableImage && (
                 <ZoomViewer
@@ -1109,7 +1125,7 @@ export function ProductImageCard({ product }: { product: Product }) {
                   <input
                     id="pdp-fullName"
                     autoComplete="name"
-                    placeholder="أدخلي اسمك ولقبك"
+                    placeholder="أدخلي اسمك"
                     {...register("fullName")}
                     aria-invalid={!!errors.fullName}
                     aria-describedby={errors.fullName ? "err-fullName" : undefined}

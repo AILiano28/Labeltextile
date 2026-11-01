@@ -8,6 +8,7 @@ import { preload } from "react-dom";
 import { ToastProvider } from "@/components/ToastProvider";
 import { naskh, plexArabic } from "@/components/productDetails/pdpFonts";
 import "@/components/productDetails/pdp.css";
+import PdpFontsGate, { PDP_FONTS_NOSCRIPT, PDP_FONTS_TIMER } from "@/components/productDetails/PdpFontsGate";
 
 export default async function Page({
   params,
@@ -42,6 +43,11 @@ export default async function Page({
   return (
     <div className={`pdp-root ${plexArabic.variable} ${naskh.variable} bg-lt-ivory text-lt-espresso`}>
       <ToastProvider />
+      <PdpFontsGate />
+      <script dangerouslySetInnerHTML={{ __html: PDP_FONTS_TIMER }} />
+      <noscript>
+        <style>{PDP_FONTS_NOSCRIPT}</style>
+      </noscript>
 
       {/* Full-bleed gallery on mobile; the single sticky order bar lives inside ProductImageCard. */}
       <div className="mx-auto max-w-7xl pt-[70px] md:px-8 md:pt-44 lg:px-12">

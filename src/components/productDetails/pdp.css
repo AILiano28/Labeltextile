@@ -1,15 +1,28 @@
 /* Product page: Arabic faces scoped to .pdp-root.
-   globals.css sets `* { font-family: poppins !important }`, so these rules must be !important too. */
+   globals.css sets `* { font-family: poppins !important }`, so these rules must be !important too.
+
+   The web fonts are switched on by `data-pdp-fonts` on <html>, set right after hydration (PdpFontsGate),
+   so their ~290 KB don't compete with the JavaScript on slow connections. Until then the page uses the
+   size-adjusted fallback the browser already shows while the fonts download (display: swap).
+   Safety nets: a 5 s timer in page.tsx, and a <noscript> style when JavaScript is off. */
 .pdp-root,
 .pdp-root * {
-  font-family: var(--font-pdp-sans), sans-serif !important;
+  font-family: "IBM Plex Sans Arabic Fallback", sans-serif !important;
 }
 .pdp-root .pdp-display {
+  font-family: "IBM Plex Sans Arabic Fallback", serif !important;
+}
+html[data-pdp-fonts] .pdp-root,
+html[data-pdp-fonts] .pdp-root * {
+  font-family: var(--font-pdp-sans), sans-serif !important;
+}
+html[data-pdp-fonts] .pdp-root .pdp-display {
   font-family: var(--font-pdp-display), var(--font-pdp-sans), serif !important;
 }
-/* The LABELTEXTILE wordmark in the order success modal keeps its Montserrat face. */
-.pdp-root .pdp-logo,
-.pdp-root .pdp-logo * {
+/* The LABELTEXTILE wordmark in the order success modal keeps its Montserrat face
+   (`html` raises the specificity above the gated rules). */
+html .pdp-root .pdp-logo,
+html .pdp-root .pdp-logo * {
   font-family: var(--font-lt-logo), sans-serif !important;
 }
 

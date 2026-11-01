@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useTransition } from "react";
 import { naskh, plexArabic } from "@/components/productDetails/pdpFonts";
 import "@/components/productDetails/pdp.css";
+import PdpFontsGate from "@/components/productDetails/PdpFontsGate";
 
 /**
  * Shown only when the product itself cannot be loaded (for example the backend is unreachable).
@@ -27,6 +28,7 @@ export default function ProductError({ error, reset }: { error: Error & { digest
 
   return (
     <div dir="rtl" className={`pdp-root ${plexArabic.variable} ${naskh.variable} flex min-h-[70vh] items-center justify-center bg-[#FAF9F6] px-6 pt-24 pb-16`}>
+      <PdpFontsGate />
       <div className="w-full max-w-sm text-center text-[#302B27]">
         <h1 className="pdp-display text-[22px] font-semibold leading-[1.5]">تعذّر تحميل المنتج حاليًا</h1>
         <p className="mt-2 text-[15px] leading-[1.75] text-[#625850]">
