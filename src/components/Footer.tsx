@@ -79,7 +79,7 @@ const Footer = () => {
                   strokeWidth={1.5}
                 />
                 <span className="text-black" style={{ fontSize: "16px" }}>
-                  Bechar , Algeria 3421
+                  دالي إبراهيم، عين الله، الجزائر
                 </span>
               </li>
             </ul>
@@ -145,23 +145,23 @@ const Footer = () => {
         <div className="mt-10 pt-5 border-t border-[#666666] flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-8">
             <Link
-              href="#"
+              href="/privacy-policy"
               className="text-black hover:text-primary-900 transition-colors duration-200"
               style={{ fontSize: "16px" }}
             >
-              Privacy Policy
+              سياسة الخصوصية
             </Link>
             <Link
-              href="#"
+              href="/terms"
               className="text-black hover:text-primary-900 transition-colors duration-200"
               style={{ fontSize: "16px" }}
             >
-              Terms of services
+              الشروط والأحكام
             </Link>
           </div>
 
           <p className="text-black" style={{ fontSize: "16px" }}>
-            {new Date().getFullYear()} LabelTextile. All Riht Reserved
+            {new Date().getFullYear()} LabelTextile. All Rights Reserved
           </p>
         </div>
       </div>

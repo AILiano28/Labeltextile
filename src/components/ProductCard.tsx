@@ -1,16 +1,9 @@
 import { Product } from "@/types/api";
 import { ShoppingBag } from "lucide-react";
-import dynamic from "next/dynamic";
 import Link from "next/link";
 
+import ProductCardGallery from "./ProductCardGallery";
 import placeholderImage from "../../public/assets/placeholder-image.svg";
-
-const ProductImageSlider = dynamic(() => import("./ProductImageSlider"), {
-  ssr: true, // We want the first image to render on server
-  loading: () => (
-    <div className="relative w-full h-full bg-[#d9d9d9] animate-pulse" />
-  ),
-});
 
 export default function ProductCard({ product }: { product: Product }) {
   // Parse images
@@ -33,7 +26,9 @@ export default function ProductCard({ product }: { product: Product }) {
     <div className="relative flex flex-col w-full h-auto group" dir="rtl">
       {/* Product Image Slider Island */}
       <div className="relative w-full aspect-[4/5] overflow-hidden bg-[#d9d9d9]">
-        <ProductImageSlider 
+        {/* Only used in the home page product grid, below the hero: the first photo loads lazily and the
+            swipeable slider (Swiper) only when the card gets near the screen. */}
+        <ProductCardGallery
           images={images}
           productTitle={product.title}
           productId={product.id}

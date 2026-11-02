@@ -1,146 +1,80 @@
-import React from "react";
-import Image from "next/image";
 import Link from "next/link";
+import { ArrowRight } from "lucide-react";
+import { preload } from "react-dom";
+
+// Owner-approved homepage banner (1774 × 887).
+// - Tablet/desktop (≥ 768 px): the full banner. Its headline, subtitle and «تسوقي الآن» button are part of
+//   the image, so nothing is drawn on top; the text below is screen-reader-only there.
+// - Phones (< 768 px): the banner's text would be ~7–8 px, so phones get a square crop of the same image
+//   (the model and the floral kimono) with the same headline, subtitle and button as real, readable text
+//   underneath, in the banner's own colours.
+// Pre-generated AVIF (q60, 4:4:4; phone crop q52) and WebP (q82) files in /public/assets/home, served as-is (no runtime
+// image optimization). The whole hero is one link to the collections.
+const DESKTOP = [640, 828, 1080, 1280, 1774];
+const MOBILE = [480, 640, 828, 887];
+const srcSet = (name: string, widths: number[], ext: "avif" | "webp") =>
+  widths.map((w) => `/assets/home/${name}-${w}.${ext} ${w}w`).join(", ");
+const PHONE = "(max-width: 767px)";
+const DESKTOP_SIZES = "(min-width: 1920px) 1920px, 100vw";
 
 export default function Hero() {
+  // Each device class preloads only its own LCP image, starting with the HTML.
+  preload("/assets/home/hero-mobile-828.avif", {
+    as: "image",
+    type: "image/avif",
+    imageSrcSet: srcSet("hero-mobile", MOBILE, "avif"),
+    imageSizes: "100vw",
+    media: PHONE,
+    fetchPriority: "high",
+  });
+  preload("/assets/home/hero-banner-1774.avif", {
+    as: "image",
+    type: "image/avif",
+    imageSrcSet: srcSet("hero-banner", DESKTOP, "avif"),
+    imageSizes: DESKTOP_SIZES,
+    media: "(min-width: 768px)",
+    fetchPriority: "high",
+  });
+
   return (
-    <section className="relative w-full overflow-hidden">
-      {/* Background: warm beige gradient */}
-      <div className="absolute hidden md:block inset-0 bg-gradient-to-b from-[#F2F0ED] to-[#C7B7A7]" />
-
-      {/* Flower — top-right (desktop only) */}
-      <div className="absolute md:-top-32 md:-left-30 -left-30 md:w-[480px] w-[200px] h-[200px] md:h-[480px] opacity-25 pointer-events-none select-none   ">
-        <Image
-          src="/assets/background-flower.avif"
-          alt=""
-          fill
-          sizes="200px"
-          loading="lazy"
-          quality={75}
-          className="object-contain"
-          aria-hidden="true"
-        />
-      </div>
-
-      {/* Flower — bottom-left (desktop only) */}
-      <div className="absolute md:-bottom-32 bottom-70 md:-right-40 -right-30 md:w-[480px] w-[200px] h-[200px] md:h-[480px] opacity-25 pointer-events-none select-none  ">
-        <Image
-          src="/assets/background-flower.avif"
-          alt=""
-          fill
-          sizes="200px"
-          loading="lazy"
-          quality={75}
-          className="object-contain rotate-180"
-          aria-hidden="true"
-        />
-      </div>
-
-      {/* ── DESKTOP LAYOUT ── */}
-      <div className="hidden lg:block relative w-full h-screen">
-        {/* Model image — LEFT side, full height, no cropping */}
-        <div
-          className="absolute inset-0 pointer-events-none select-none"
-          style={{
-            transform: "translateX(-13%)",
-          }}
-        >
-          <Image
-            src="/assets/hero.avif"
-            alt="مجموعة أزياء لابيل تكستايل"
-            fill
-            sizes="(max-width: 1024px) 100vw, 70vw"
-            className="object-cover object-center lg:object-left"
-            priority
-            quality={75}
-            fetchPriority="high"
-          />
-        </div>
-        {/* Text — RIGHT side, vertically centered */}
-        <div
-          className="absolute inset-y-0 right-0 flex items-center z-10"
-          style={{ width: "50%" }}
-        >
-          <div
-            className="flex flex-col w-full pr-12  "
-            style={{ direction: "rtl", textAlign: "right" }}
-          >
-            <h1
-              className="font-normal text-black leading-[1.2] mb-5"
-              style={{
-                fontSize: "clamp(38px, 4.5vw, 68px)",
-                fontFamily: "'Poltawski Nowy', serif",
-              }}
-            >
-              حسي بروحك جميلة كل يوم
-            </h1>
-
-            <p
-              className="text-black mb-10 leading-relaxed"
-              style={{ fontSize: "clamp(20px, 1.1vw, 24px)" }}
-            >
-              قمصان أنيقة وبيجامات مريحة مصممة لراحتك وأناقتك
-            </p>
-
-            <div>
-              <Link
-                href="/Cata"
-                className="inline-flex items-center justify-center px-25 h-[52px] border border-black text-black text-lg hover:bg-[#B3A495] hover:text-white transition-all duration-300"
-                style={{ fontFamily: "'Poltawski Nowy', serif" }}
-              >
-                اكتشفي المجموعة
-              </Link>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* ── MOBILE LAYOUT ── */}
-      <div
-        className="relative flex lg:hidden w-full flex-col justify-end mt-16"
-        style={{ minHeight: "100svh" }}
+    // Top padding = height of the fixed navbar (70 px on phones, logo row + menu on desktop).
+    <section className="relative w-full bg-[#E6CDBD] pt-[70px] md:pt-[118px]">
+      <Link
+        href="/cataProducts"
+        aria-label="تسوقي الآن: تشكيلة الكيمونو والعبايات المنزلية"
+        className="mx-auto block max-w-[1920px]"
       >
-        <div className="relative w-full h-[65vh]">
-          <Image
-            src="/assets/hero-mobile.avif"
-            alt="مجموعة أزياء لابيل تكستايل"
-            fill
-            priority
+        <picture>
+          <source media={PHONE} type="image/avif" srcSet={srcSet("hero-mobile", MOBILE, "avif")} sizes="100vw" />
+          <source media={PHONE} type="image/webp" srcSet={srcSet("hero-mobile", MOBILE, "webp")} sizes="100vw" />
+          <source type="image/avif" srcSet={srcSet("hero-banner", DESKTOP, "avif")} sizes={DESKTOP_SIZES} />
+          <source type="image/webp" srcSet={srcSet("hero-banner", DESKTOP, "webp")} sizes={DESKTOP_SIZES} />
+          {/* Plain <img> inside <picture>: next/image can't serve per-format/per-device <source> sets.
+              The aspect ratio (1:1 on phones, 2:1 from 768 px) reserves the space before the image loads. */}
+          <img
+            src="/assets/home/hero-banner-1774.webp"
+            width={1774}
+            height={887}
+            alt="امرأة ترتدي كيمونو منزليًا بنقشة زهور في صالون دافئ"
             fetchPriority="high"
-            quality={75}
-            sizes="100vw"
-            className="object-cover object-top"
+            className="block aspect-square h-auto w-full object-cover md:aspect-[1774/887]"
           />
-        </div>
+        </picture>
 
-        {/* Text at bottom */}
-        <div
-          className="relative flex flex-col items-center py-8 px-6"
-          style={{ zIndex: 2, direction: "rtl", textAlign: "center" }}
-        >
-          <h1
-            className="font-bold text-black leading-[1.2] mb-4"
-            style={{
-              fontSize: "clamp(34px, 9vw, 50px)",
-              fontFamily: "'Poppins', serif",
-            }}
-          >
-            حسي بروحك جميلة كل يوم
+        {/* Phones: the banner's text as real text. From 768 px the image carries it, so screen-reader-only. */}
+        <div dir="rtl" className="px-6 pt-5 pb-9 text-right md:sr-only">
+          <h1 className="text-[clamp(30px,8.4vw,38px)] font-medium leading-[1.25] text-[#2E1E14]">
+            راحة وأناقة
+            <br />
+            في كل لحظة
           </h1>
-
-          <p className="text-black text-[15px] mb-8 leading-relaxed max-w-[300px]">
-            قمصان أنيقة وبيجامات مريحة مصممة لراحتك وأناقتك
-          </p>
-
-          <Link
-            href="/Cata"
-            className="inline-flex items-center justify-center px-10 h-[52px] w-[240px] border border-black text-black text-[16px] bg-white/30 backdrop-blur-sm hover:bg-[#B3A495] hover:text-white transition-all duration-300"
-            style={{ fontFamily: "'Poltawski Nowy', serif" }}
-          >
-            اكتشفي المجموعة
-          </Link>
+          <p className="mt-3 text-[16px] leading-[1.7] text-[#4A3A30]">تشكيلة أنيقة من الكيمونو والعبايات المنزلية</p>
+          <span className="mt-6 inline-flex h-12 items-center gap-3 rounded-md bg-[#452F23] px-7 text-[16px] font-medium text-white">
+            تسوقي الآن
+            <ArrowRight size={18} strokeWidth={1.8} aria-hidden />
+          </span>
         </div>
-      </div>
+      </Link>
     </section>
   );
 }
